@@ -2273,7 +2273,7 @@ namespace System.Linq.Expressions.Interpreter
                 _frame = frame;
             }
 
-            protected internal override Expression VisitLambda<T>(Expression<T> node)
+            protected override Expression VisitLambda<T>(Expression<T> node)
             {
                 _shadowedVars.Push(new Set<ParameterExpression>(node.Parameters));
                 Expression b = Visit(node.Body);
@@ -2285,7 +2285,7 @@ namespace System.Linq.Expressions.Interpreter
                 return node.Update(b, node.Parameters);
             }
 
-            protected internal override Expression VisitBlock(BlockExpression node)
+            protected override Expression VisitBlock(BlockExpression node)
             {
                 if (node.Variables.Count > 0)
                 {
@@ -2322,7 +2322,7 @@ namespace System.Linq.Expressions.Interpreter
                 return Expression.MakeCatchBlock(node.Test, node.Variable, b, f);
             }
 
-            protected internal override Expression VisitRuntimeVariables(RuntimeVariablesExpression node)
+            protected override Expression VisitRuntimeVariables(RuntimeVariablesExpression node)
             {
                 int count = node.Variables.Count;
                 var boxes = new List<IStrongBox>();
@@ -2377,7 +2377,7 @@ namespace System.Linq.Expressions.Interpreter
                 return new MergedRuntimeVariables(first, second, indexes);
             }
 
-            protected internal override Expression VisitParameter(ParameterExpression node)
+            protected override Expression VisitParameter(ParameterExpression node)
             {
                 LocalVariable var;
                 if (_variables.TryGetValue(node, out var))

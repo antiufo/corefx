@@ -27,7 +27,7 @@ namespace System.Runtime.CompilerServices
         /// </summary>
         public ReadOnlyCollectionBuilder()
         {
-            _items = Array.Empty<T>();
+            _items = ArrayEx.Empty<T>();
         }
 
         /// <summary>
@@ -95,7 +95,7 @@ namespace System.Runtime.CompilerServices
                     }
                     else
                     {
-                        _items = Array.Empty<T>();
+                        _items = ArrayEx.Empty<T>();
                     }
                 }
             }
@@ -469,7 +469,7 @@ namespace System.Runtime.CompilerServices
             {
                 items = ToArray();
             }
-            _items = Array.Empty<T>();
+            _items = ArrayEx.Empty<T>();
             _size = 0;
             _version++;
 

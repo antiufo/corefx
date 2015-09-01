@@ -12,8 +12,12 @@ namespace InterpreterSandbox
         static void Main(string[] args)
         {
             var k = new System.Linq.Expressions.Interpreter.LightCompiler();
-            
-            
+
+            var par = Expression.Parameter(typeof(int), "x");
+            var ex = Expression.Lambda(Expression.Add(par, Expression.Constant(5)), par);
+            var zz = k.CompileTop(ex);
+
+            Console.WriteLine(zz.CreateDelegate().DynamicInvoke(4));
             
             
         }

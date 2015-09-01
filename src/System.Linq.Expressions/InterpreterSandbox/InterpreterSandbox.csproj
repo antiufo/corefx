@@ -45,9 +45,9 @@
     <None Include="App.config" />
   </ItemGroup>
   <ItemGroup>
-    <ProjectReference Include="..\src\System.Linq.Expressions.csproj">
-      <Project>{aef718e9-d4fc-418f-a7ae-ed6b2c7b3787}</Project>
-      <Name>System.Linq.Expressions</Name>
+    <ProjectReference Include="..\src\System.Linq.Expressions.Interpreter.csproj">
+      <Project>{0a5f5d0e-e4a5-4010-a86c-4721aacf78af}</Project>
+      <Name>System.Linq.Expressions.Interpreter</Name>
     </ProjectReference>
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />

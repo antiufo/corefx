@@ -9,8 +9,9 @@
     <AppDesignerFolder>Properties</AppDesignerFolder>
     <RootNamespace>System.Linq.Expressions.Interpreter</RootNamespace>
     <AssemblyName>System.Linq.Expressions.Interpreter</AssemblyName>
-    <TargetFrameworkVersion>v4.6</TargetFrameworkVersion>
+    <TargetFrameworkVersion>v4.5</TargetFrameworkVersion>
     <FileAlignment>512</FileAlignment>
+    <TargetFrameworkProfile />
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
     <DebugSymbols>true</DebugSymbols>
@@ -28,6 +29,12 @@
     <DefineConstants>TRACE</DefineConstants>
     <ErrorReport>prompt</ErrorReport>
     <WarningLevel>4</WarningLevel>
+  </PropertyGroup>
+  <PropertyGroup>
+    <SignAssembly>true</SignAssembly>
+  </PropertyGroup>
+  <PropertyGroup>
+    <AssemblyOriginatorKeyFile>StrongKey.snk</AssemblyOriginatorKeyFile>
   </PropertyGroup>
   <ItemGroup>
     <Reference Include="System" />
@@ -64,12 +71,6 @@
     <Compile Include="..\..\Common\src\System\Dynamic\Utils\ExpressionUtils.cs">
       <Link>Common\System\Dynamic\Utils\ExpressionUtils.cs</Link>
     </Compile>
-    <Compile Include="..\..\Common\src\System\Dynamic\Utils\ExpressionVisitorUtils.cs">
-      <Link>Common\System\Dynamic\Utils\ExpressionVisitorUtils.cs</Link>
-    </Compile>
-    <Compile Include="..\..\Common\src\System\Dynamic\Utils\ListArgumentProvider.cs">
-      <Link>Common\System\Dynamic\Utils\ListArgumentProvider.cs</Link>
-    </Compile>
     <Compile Include="..\..\Common\src\System\Dynamic\Utils\Strings.cs">
       <Link>Common\System\Dynamic\Utils\Strings.cs</Link>
     </Compile>
@@ -94,32 +95,16 @@
     <Compile Include="..\..\Common\src\System\Runtime\CompilerServices\TrueReadOnlyCollection.cs">
       <Link>Common\System\Runtime\CompilerServices\TrueReadOnlyCollection.cs</Link>
     </Compile>
+    <Compile Include="ArrayEx.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
+    <Compile Include="ReflectionProxies.cs" />
     <Compile Include="SR-Common.cs" />
     <Compile Include="SR.cs" />
     <Compile Include="System\Dynamic\Utils\CollectionExtensions.cs" />
     <Compile Include="System\Dynamic\Utils\TypeExtensions.cs" />
     <Compile Include="System\Dynamic\Utils\TypeUtils.cs" />
-    <Compile Include="System\Linq\Expressions\BinaryExpression.cs" />
-    <Compile Include="System\Linq\Expressions\BlockExpression.cs" />
-    <Compile Include="System\Linq\Expressions\CatchBlock.cs" />
     <Compile Include="System\Linq\Expressions\Compiler\DelegateHelpers.Generated.cs" />
-    <Compile Include="System\Linq\Expressions\ConditionalExpression.cs" />
-    <Compile Include="System\Linq\Expressions\ConstantExpression.cs" />
-    <Compile Include="System\Linq\Expressions\DebugInfoExpression.cs" />
-    <Compile Include="System\Linq\Expressions\DebugViewWriter.cs" />
-    <Compile Include="System\Linq\Expressions\DefaultExpression.cs" />
-    <Compile Include="System\Linq\Expressions\ElementInit.cs" />
     <Compile Include="System\Linq\Expressions\Error.cs" />
-    <Compile Include="System\Linq\Expressions\Expression.cs" />
-    <Compile Include="System\Linq\Expressions\Expression.DebuggerProxy.cs" />
-    <Compile Include="System\Linq\Expressions\ExpressionStringBuilder.cs" />
-    <Compile Include="System\Linq\Expressions\ExpressionType.cs" />
-    <Compile Include="System\Linq\Expressions\ExpressionVisitor.cs" />
-    <Compile Include="System\Linq\Expressions\GotoExpression.cs" />
-    <Compile Include="System\Linq\Expressions\IArgumentProvider.cs" />
-    <Compile Include="System\Linq\Expressions\IDynamicExpression.cs" />
-    <Compile Include="System\Linq\Expressions\IndexExpression.cs" />
     <Compile Include="System\Linq\Expressions\Interpreter\AddInstruction.cs" />
     <Compile Include="System\Linq\Expressions\Interpreter\ArrayOperations.cs" />
     <Compile Include="System\Linq\Expressions\Interpreter\BranchLabel.cs" />
@@ -152,33 +137,14 @@
     <Compile Include="System\Linq\Expressions\Interpreter\SubInstruction.cs" />
     <Compile Include="System\Linq\Expressions\Interpreter\TypeOperations.cs" />
     <Compile Include="System\Linq\Expressions\Interpreter\Utilities.cs" />
-    <Compile Include="System\Linq\Expressions\InvocationExpression.cs" />
-    <Compile Include="System\Linq\Expressions\LabelExpression.cs" />
-    <Compile Include="System\Linq\Expressions\LabelTarget.cs" />
-    <Compile Include="System\Linq\Expressions\LambdaExpression.cs" />
-    <Compile Include="System\Linq\Expressions\ListInitExpression.cs" />
-    <Compile Include="System\Linq\Expressions\LoopExpression.cs" />
-    <Compile Include="System\Linq\Expressions\MemberAssignment.cs" />
-    <Compile Include="System\Linq\Expressions\MemberBinding.cs" />
-    <Compile Include="System\Linq\Expressions\MemberExpression.cs" />
-    <Compile Include="System\Linq\Expressions\MemberInitExpression.cs" />
-    <Compile Include="System\Linq\Expressions\MemberListBinding.cs" />
-    <Compile Include="System\Linq\Expressions\MemberMemberBinding.cs" />
-    <Compile Include="System\Linq\Expressions\MethodCallExpression.cs" />
-    <Compile Include="System\Linq\Expressions\NewArrayExpression.cs" />
-    <Compile Include="System\Linq\Expressions\NewExpression.cs" />
-    <Compile Include="System\Linq\Expressions\ParameterExpression.cs" />
-    <Compile Include="System\Linq\Expressions\RuntimeVariablesExpression.cs" />
     <Compile Include="System\Linq\Expressions\Set.cs" />
     <Compile Include="System\Linq\Expressions\Strings.cs" />
-    <Compile Include="System\Linq\Expressions\SwitchCase.cs" />
-    <Compile Include="System\Linq\Expressions\SwitchExpression.cs" />
-    <Compile Include="System\Linq\Expressions\SymbolDocumentInfo.cs" />
-    <Compile Include="System\Linq\Expressions\TryExpression.cs" />
-    <Compile Include="System\Linq\Expressions\TypeBinaryExpression.cs" />
-    <Compile Include="System\Linq\Expressions\UnaryExpression.cs" />
-    <Compile Include="System\Linq\IQueryable.cs" />
-    <Compile Include="System\Runtime\CompilerServices\IRuntimeVariables.cs" />
+  </ItemGroup>
+  <ItemGroup>
+    <Folder Include="System\Runtime\CompilerServices\" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="StrongKey.snk" />
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 

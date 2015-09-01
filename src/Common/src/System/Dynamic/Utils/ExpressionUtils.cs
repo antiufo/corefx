@@ -35,6 +35,7 @@ namespace System.Dynamic.Utils
             return (ReadOnlyCollection<T>)collection;
         }
 
+#if false
         /// <summary>
         /// Helper used for ensuring we only return 1 instance of a ReadOnlyCollection of T.
         /// 
@@ -66,7 +67,7 @@ namespace System.Dynamic.Utils
             return (ReadOnlyCollection<Expression>)collection;
         }
 
-
+#endif
         /// <summary>
         /// Helper which is used for specialized subtypes which use ReturnReadOnly(ref object, ...). 
         /// This is the reverse version of ReturnReadOnly which takes an IArgumentProvider.

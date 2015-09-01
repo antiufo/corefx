@@ -264,7 +264,7 @@ namespace System.Linq.Expressions.Interpreter
 
         private readonly LightCompiler _parent;
 
-        private static LocalDefinition[] s_emptyLocals = Array.Empty<LocalDefinition>();
+        private static LocalDefinition[] s_emptyLocals = ArrayEx.Empty<LocalDefinition>();
 
         public LightCompiler()
         {
@@ -1238,7 +1238,7 @@ namespace System.Linq.Expressions.Interpreter
 
         private void CompileLogicalBinaryExpression(BinaryExpression b, bool andAlso)
         {
-            if (b.Method != null && !b.IsLiftedLogical)
+            if (b.Method != null && !ReflectionProxies.BinaryExpression_IsLiftedLogical(b))
             {
                 CompileMethodLogicalBinaryExpression(b, andAlso);
             }
@@ -1246,9 +1246,9 @@ namespace System.Linq.Expressions.Interpreter
             {
                 CompileLiftedLogicalBinaryExpression(b, andAlso);
             }
-            else if (b.IsLiftedLogical)
+            else if (ReflectionProxies.BinaryExpression_IsLiftedLogical(b))
             {
-                Compile(b.ReduceUserdefinedLifted());
+                Compile(ReflectionProxies.BinaryExpression_ReduceUserdefinedLifted(b));
             }
             else
             {
@@ -2400,7 +2400,7 @@ namespace System.Linq.Expressions.Interpreter
                     {
                         // reflection doesn't let us call methods on Nullable<T> when the value
                         // is null...  so we get to special case those methods!
-                        _instructions.EmitNullableCall(method, Array.Empty<ParameterInfo>());
+                        _instructions.EmitNullableCall(method, ArrayEx.Empty<ParameterInfo>());
                     }
                     else
                     {
@@ -2551,7 +2551,7 @@ namespace System.Linq.Expressions.Interpreter
 
             if (typeof(LambdaExpression).IsAssignableFrom(node.Expression.Type))
             {
-                var compMethod = node.Expression.Type.GetMethod("Compile", Array.Empty<Type>());
+                var compMethod = node.Expression.Type.GetMethod("Compile", ArrayEx.Empty<Type>());
                 CompileMethodCallExpression(
                     Expression.Call(
                         Expression.Call(
@@ -2672,7 +2672,7 @@ namespace System.Linq.Expressions.Interpreter
             private readonly Dictionary<ParameterExpression, int> _definedParameters = new Dictionary<ParameterExpression, int>();
             public readonly HashSet<ParameterExpression> _hoistedParameters = new HashSet<ParameterExpression>();
 
-            protected internal override Expression VisitParameter(ParameterExpression node)
+            protected override Expression VisitParameter(ParameterExpression node)
             {
                 if (!_definedParameters.ContainsKey(node))
                 {
@@ -2681,7 +2681,7 @@ namespace System.Linq.Expressions.Interpreter
                 return node;
             }
 
-            protected internal override Expression VisitBlock(BlockExpression node)
+            protected override Expression VisitBlock(BlockExpression node)
             {
                 PushParameters(node.Variables);
 
@@ -2707,7 +2707,7 @@ namespace System.Linq.Expressions.Interpreter
                 return node;
             }
 
-            protected internal override Expression VisitLambda<T>(Expression<T> node)
+            protected override Expression VisitLambda<T>(Expression<T> node)
             {
                 PushParameters(node.Parameters);
 
