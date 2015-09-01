@@ -251,7 +251,7 @@ namespace System.Linq.Expressions.Interpreter
     }
 
     [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Maintainability", "CA1506:AvoidExcessiveClassCoupling")]
-    internal sealed class LightCompiler
+    public sealed class LightCompiler
     {
         private readonly InstructionList _instructions;
         private readonly LocalVariables _locals = new LocalVariables();
@@ -277,12 +277,12 @@ namespace System.Linq.Expressions.Interpreter
             _parent = parent;
         }
 
-        public InstructionList Instructions
+        internal InstructionList Instructions
         {
             get { return _instructions; }
         }
 
-        public LocalVariables Locals
+        internal LocalVariables Locals
         {
             get { return _locals; }
         }
@@ -1677,18 +1677,18 @@ namespace System.Linq.Expressions.Interpreter
                 node.Target.Type != typeof(void));
         }
 
-        public BranchLabel GetBranchLabel(LabelTarget target)
+        internal BranchLabel GetBranchLabel(LabelTarget target)
         {
             return ReferenceLabel(target).GetLabel(this);
         }
 
-        public void PushLabelBlock(LabelScopeKind type)
+        internal void PushLabelBlock(LabelScopeKind type)
         {
             _labelBlock = new LabelScopeInfo(_labelBlock, type);
         }
 
         [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Usage", "CA1801:ReviewUnusedParameters", MessageId = "kind")]
-        public void PopLabelBlock(LabelScopeKind kind)
+        internal void PopLabelBlock(LabelScopeKind kind)
         {
             Debug.Assert(_labelBlock != null && _labelBlock.Kind == kind);
             _labelBlock = _labelBlock.Parent;

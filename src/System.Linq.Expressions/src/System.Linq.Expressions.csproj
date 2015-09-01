@@ -6,7 +6,7 @@
     <Platform Condition=" '$(Platform)' == '' ">AnyCPU</Platform>
     <ProjectGuid>{AEF718E9-D4FC-418F-A7AE-ED6B2C7B3787}</ProjectGuid>
     <OutputType>Library</OutputType>
-    <AssemblyName>System.Linq.Expressions</AssemblyName>
+    <AssemblyName>System.Linq.Expressions.Interpreter</AssemblyName>
     <RootNamespace>System.Linq.Expressions</RootNamespace>
     <AssemblyVersion>4.0.11.0</AssemblyVersion>
     <!--<DefineConstants Condition=" '$(IsInterpreting)' != 'true' ">$(DefineConstants);FEATURE_CORECLR</DefineConstants>-->
@@ -193,7 +193,8 @@
     <Compile Include="System\Runtime\CompilerServices\RuntimeOps.ExpressionQuoter.cs" />
     <Compile Include="System\Runtime\CompilerServices\RuntimeOps.RuntimeVariableList.cs" />
   </ItemGroup>-->
-  <ItemGroup><!-- Condition=" '$(IsInterpreting)' == 'true' ">-->
+  <ItemGroup>
+    <!-- Condition=" '$(IsInterpreting)' == 'true' ">-->
     <Compile Include="$(CommonPath)\System\Dynamic\Utils\DelegateHelpers.cs">
       <Link>Common\System\Dynamic\Utils\DelegateHelpers.cs</Link>
     </Compile>

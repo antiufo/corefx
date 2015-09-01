@@ -13,7 +13,7 @@ namespace System.Linq.Expressions.Interpreter
     /// Manages creation of interpreted delegates. These delegates will get
     /// compiled if they are executed often enough.
     /// </summary>
-    internal sealed class LightDelegateCreator
+    public sealed class LightDelegateCreator
     {
         // null if we are forced to compile
         private readonly Interpreter _interpreter;
