@@ -1,0 +1,12 @@
+{
+  "version": "1.0.0-*",
+  "frameworks": {
+    "net45": {
+      "wrappedProject": "../../src/Shaman.System.Linq.Expressions.Interpreter.csproj",
+      "bin": {
+        "assembly": "../../src/obj/{configuration}/System.Linq.Expressions.Interpreter.dll",
+        "pdb": "../../src/obj/{configuration}/System.Linq.Expressions.Interpreter.pdb"
+      }
+    }
+  }
+}
