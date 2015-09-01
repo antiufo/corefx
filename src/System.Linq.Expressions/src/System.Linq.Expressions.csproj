@@ -9,10 +9,11 @@
     <AssemblyName>System.Linq.Expressions</AssemblyName>
     <RootNamespace>System.Linq.Expressions</RootNamespace>
     <AssemblyVersion>4.0.11.0</AssemblyVersion>
-    <DefineConstants Condition=" '$(IsInterpreting)' != 'true' ">$(DefineConstants);FEATURE_CORECLR</DefineConstants>
+    <!--<DefineConstants Condition=" '$(IsInterpreting)' != 'true' ">$(DefineConstants);FEATURE_CORECLR</DefineConstants>-->
   </PropertyGroup>
   <!-- Default configurations to help VS understand the configurations -->
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
+    <DefineConstants>,DEBUG,TRACE;DEBUGRESOURCES;SIGNED;</DefineConstants>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
   </PropertyGroup>
@@ -90,6 +91,38 @@
     <Compile Include="System\Linq\Expressions\IArgumentProvider.cs" />
     <Compile Include="System\Linq\Expressions\IDynamicExpression.cs" />
     <Compile Include="System\Linq\Expressions\IndexExpression.cs" />
+    <Compile Include="System\Linq\Expressions\Interpreter\AddInstruction.cs" />
+    <Compile Include="System\Linq\Expressions\Interpreter\ArrayOperations.cs" />
+    <Compile Include="System\Linq\Expressions\Interpreter\BranchLabel.cs" />
+    <Compile Include="System\Linq\Expressions\Interpreter\CallInstruction.cs" />
+    <Compile Include="System\Linq\Expressions\Interpreter\CallInstruction.Generated.cs" />
+    <Compile Include="System\Linq\Expressions\Interpreter\ConstantCheck.cs" />
+    <Compile Include="System\Linq\Expressions\Interpreter\ControlFlowInstructions.cs" />
+    <Compile Include="System\Linq\Expressions\Interpreter\DivInstruction.cs" />
+    <Compile Include="System\Linq\Expressions\Interpreter\EqualInstruction.cs" />
+    <Compile Include="System\Linq\Expressions\Interpreter\FieldOperations.cs" />
+    <Compile Include="System\Linq\Expressions\Interpreter\GreaterThanInstruction.cs" />
+    <Compile Include="System\Linq\Expressions\Interpreter\ILightCallSiteBinder.cs" />
+    <Compile Include="System\Linq\Expressions\Interpreter\Instruction.cs" />
+    <Compile Include="System\Linq\Expressions\Interpreter\InstructionList.cs" />
+    <Compile Include="System\Linq\Expressions\Interpreter\InterpretedFrame.cs" />
+    <Compile Include="System\Linq\Expressions\Interpreter\Interpreter.cs" />
+    <Compile Include="System\Linq\Expressions\Interpreter\LabelInfo.cs" />
+    <Compile Include="System\Linq\Expressions\Interpreter\LessThanInstruction.cs" />
+    <Compile Include="System\Linq\Expressions\Interpreter\LightCompiler.cs" />
+    <Compile Include="System\Linq\Expressions\Interpreter\LightDelegateCreator.cs" />
+    <Compile Include="System\Linq\Expressions\Interpreter\LightLambda.cs" />
+    <Compile Include="System\Linq\Expressions\Interpreter\LightLambda.Generated.cs" />
+    <Compile Include="System\Linq\Expressions\Interpreter\LocalAccess.cs" />
+    <Compile Include="System\Linq\Expressions\Interpreter\LocalVariables.cs" />
+    <Compile Include="System\Linq\Expressions\Interpreter\MulInstruction.cs" />
+    <Compile Include="System\Linq\Expressions\Interpreter\NotEqualInstruction.cs" />
+    <Compile Include="System\Linq\Expressions\Interpreter\NumericConvertInstruction.cs" />
+    <Compile Include="System\Linq\Expressions\Interpreter\RuntimeVariables.cs" />
+    <Compile Include="System\Linq\Expressions\Interpreter\StackOperations.cs" />
+    <Compile Include="System\Linq\Expressions\Interpreter\SubInstruction.cs" />
+    <Compile Include="System\Linq\Expressions\Interpreter\TypeOperations.cs" />
+    <Compile Include="System\Linq\Expressions\Interpreter\Utilities.cs" />
     <Compile Include="System\Linq\Expressions\InvocationExpression.cs" />
     <Compile Include="System\Linq\Expressions\LabelExpression.cs" />
     <Compile Include="System\Linq\Expressions\LabelTarget.cs" />
@@ -119,7 +152,7 @@
     <Compile Include="System\Runtime\CompilerServices\IRuntimeVariables.cs" />
     <None Include="project.json" />
   </ItemGroup>
-  <ItemGroup Condition=" '$(IsInterpreting)' != 'true' ">
+  <!--<ItemGroup Condition=" '$(IsInterpreting)' != 'true' ">
     <Compile Include="$(CommonPath)\System\Dynamic\Utils\CollectionExtensions.AddFirst.cs">
       <Link>Common\System\Dynamic\Utils\CollectionExtensions.AddFirst.cs</Link>
     </Compile>
@@ -159,44 +192,12 @@
     <Compile Include="System\Runtime\CompilerServices\Closure.cs" />
     <Compile Include="System\Runtime\CompilerServices\RuntimeOps.ExpressionQuoter.cs" />
     <Compile Include="System\Runtime\CompilerServices\RuntimeOps.RuntimeVariableList.cs" />
-  </ItemGroup>
-  <ItemGroup Condition=" '$(IsInterpreting)' == 'true' ">
+  </ItemGroup>-->
+  <ItemGroup><!-- Condition=" '$(IsInterpreting)' == 'true' ">-->
     <Compile Include="$(CommonPath)\System\Dynamic\Utils\DelegateHelpers.cs">
       <Link>Common\System\Dynamic\Utils\DelegateHelpers.cs</Link>
     </Compile>
     <Compile Include="System\Linq\Expressions\Compiler\DelegateHelpers.Generated.cs" />
-    <Compile Include="System\Linq\Expressions\Interpreter\AddInstruction.cs" />
-    <Compile Include="System\Linq\Expressions\Interpreter\ArrayOperations.cs" />
-    <Compile Include="System\Linq\Expressions\Interpreter\BranchLabel.cs" />
-    <Compile Include="System\Linq\Expressions\Interpreter\CallInstruction.cs" />
-    <Compile Include="System\Linq\Expressions\Interpreter\CallInstruction.Generated.cs" />
-    <Compile Include="System\Linq\Expressions\Interpreter\ConstantCheck.cs" />
-    <Compile Include="System\Linq\Expressions\Interpreter\ControlFlowInstructions.cs" />
-    <Compile Include="System\Linq\Expressions\Interpreter\DivInstruction.cs" />
-    <Compile Include="System\Linq\Expressions\Interpreter\EqualInstruction.cs" />
-    <Compile Include="System\Linq\Expressions\Interpreter\FieldOperations.cs" />
-    <Compile Include="System\Linq\Expressions\Interpreter\GreaterThanInstruction.cs" />
-    <Compile Include="System\Linq\Expressions\Interpreter\ILightCallSiteBinder.cs" />
-    <Compile Include="System\Linq\Expressions\Interpreter\Instruction.cs" />
-    <Compile Include="System\Linq\Expressions\Interpreter\InstructionList.cs" />
-    <Compile Include="System\Linq\Expressions\Interpreter\InterpretedFrame.cs" />
-    <Compile Include="System\Linq\Expressions\Interpreter\Interpreter.cs" />
-    <Compile Include="System\Linq\Expressions\Interpreter\LabelInfo.cs" />
-    <Compile Include="System\Linq\Expressions\Interpreter\LessThanInstruction.cs" />
-    <Compile Include="System\Linq\Expressions\Interpreter\LightCompiler.cs" />
-    <Compile Include="System\Linq\Expressions\Interpreter\LightDelegateCreator.cs" />
-    <Compile Include="System\Linq\Expressions\Interpreter\LightLambda.cs" />
-    <Compile Include="System\Linq\Expressions\Interpreter\LightLambda.Generated.cs" />
-    <Compile Include="System\Linq\Expressions\Interpreter\LocalAccess.cs" />
-    <Compile Include="System\Linq\Expressions\Interpreter\LocalVariables.cs" />
-    <Compile Include="System\Linq\Expressions\Interpreter\MulInstruction.cs" />
-    <Compile Include="System\Linq\Expressions\Interpreter\NotEqualInstruction.cs" />
-    <Compile Include="System\Linq\Expressions\Interpreter\NumericConvertInstruction.cs" />
-    <Compile Include="System\Linq\Expressions\Interpreter\RuntimeVariables.cs" />
-    <Compile Include="System\Linq\Expressions\Interpreter\StackOperations.cs" />
-    <Compile Include="System\Linq\Expressions\Interpreter\SubInstruction.cs" />
-    <Compile Include="System\Linq\Expressions\Interpreter\TypeOperations.cs" />
-    <Compile Include="System\Linq\Expressions\Interpreter\Utilities.cs" />
   </ItemGroup>
   <Import Project="$([MSBuild]::GetDirectoryNameOfFileAbove($(MSBuildThisFileDirectory), dir.targets))\dir.targets" />
 </Project>
