@@ -9,7 +9,7 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "System.Linq.Expressions.Tes
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "InterpreterSandbox", "InterpreterSandbox\InterpreterSandbox.csproj", "{5EF1EB96-424E-4155-B5E0-2BB2908019DE}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "System.Linq.Expressions.Interpreter", "src\System.Linq.Expressions.Interpreter.csproj", "{0A5F5D0E-E4A5-4010-A86C-4721AACF78AF}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Shaman.System.Linq.Expressions.Interpreter", "src\Shaman.System.Linq.Expressions.Interpreter.csproj", "{0A5F5D0E-E4A5-4010-A86C-4721AACF78AF}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution

@@ -1,0 +1,67 @@
+{
+  "version": "1.0.0-beta-2889",
+  "compilationOptions": {
+    "keyFile": "../StrongKey.snk"
+  },
+  "compile": [
+    "../*.cs",
+    "../../../Common/src/System/Dynamic/Utils/CacheDict.cs",
+    "../../../Common/src/System/Dynamic/Utils/CollectionExtensions.cs",
+    "../../../Common/src/System/Dynamic/Utils/CollectionExtensions.Map.cs",
+    "../../../Common/src/System/Dynamic/Utils/ContractUtils.cs",
+    "../../../Common/src/System/Dynamic/Utils/DelegateHelpers.cs",
+    "../../../Common/src/System/Dynamic/Utils/EmptyReadOnlyCollection.cs",
+    "../../../Common/src/System/Dynamic/Utils/Error.cs",
+    "../../../Common/src/System/Dynamic/Utils/ExpressionUtils.cs",
+    "../../../Common/src/System/Dynamic/Utils/Strings.cs",
+    "../../../Common/src/System/Dynamic/Utils/TypeExtensions.cs",
+    "../../../Common/src/System/Dynamic/Utils/TypeUtils.cs",
+    "../../../Common/src/System/Linq/Expressions/Compiler/DelegateHelpers.cs",
+    "../../../Common/src/System/Linq/Expressions/Compiler/DelegateHelpers.Generated.cs",
+    "../../../Common/src/System/Runtime/CompilerServices/ReadOnlyCollectionBuilder.cs",
+    "../../../Common/src/System/Runtime/CompilerServices/TrueReadOnlyCollection.cs",
+    "../../../Common/src/System/NotImplemented.cs",
+    "../System/Dynamic/Utils/CollectionExtensions.cs",
+    "../System/Dynamic/Utils/TypeExtensions.cs",
+    "../System/Dynamic/Utils/TypeUtils.cs",
+    "../System/Linq/Expressions/Error.cs",
+    "../System/Linq/Expressions/Set.cs",
+    "../System/Linq/Expressions/Strings.cs",
+    "../System/Linq/Expressions/Compiler/DelegateHelpers.Generated.cs",
+    "../System/Linq/Expressions/Interpreter/*.cs"
+  ],
+  "frameworks": {
+    "net45": {},
+    "dnxcore50": {
+      "compilationOptions": {
+        "define": [
+          "CORECLR"
+        ]
+      },
+      "dependencies": {
+        "System.Collections": "4.0.10",
+        "System.Diagnostics.Contracts": "4.0.0",
+        "System.Diagnostics.Debug": "4.0.10",
+        "System.Diagnostics.Tools": "4.0.0",
+        "System.Globalization": "4.0.10",
+        "System.IO": "4.0.10",
+        "System.Linq": "4.0.0",
+        "System.ObjectModel": "4.0.10",
+        "System.Reflection": "4.1.0-beta-23225",
+        "System.Reflection.Emit": "4.0.1-beta-23225",
+        "System.Reflection.Emit.ILGeneration": "4.0.1-beta-23225",
+        "System.Reflection.Emit.Lightweight": "4.0.1-beta-23225",
+        "System.Reflection.Extensions": "4.0.1-beta-23225",
+        "System.Reflection.Primitives": "4.0.1-beta-23225",
+        "System.Reflection.TypeExtensions": "4.0.1-beta-23225",
+        "System.Resources.ResourceManager": "4.0.0",
+        "System.Runtime": "4.0.20",
+        "System.Runtime.Extensions": "4.0.10",
+        "System.Text.Encoding": "4.0.10",
+        "System.Threading": "4.0.10",
+        "System.Threading.Tasks": "4.0.10",
+        "System.Linq.Expressions": "4.0.11-beta-23225"
+      }
+    }
+  }
+}

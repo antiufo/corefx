@@ -34,6 +34,9 @@
     <WarningLevel>4</WarningLevel>
   </PropertyGroup>
   <ItemGroup>
+    <Reference Include="Shaman.System.Linq.Expressions.Interpreter">
+      <HintPath>..\src\Shaman.System.Linq.Expressions.Interpreter\bin\Debug\dnxcore50\Shaman.System.Linq.Expressions.Interpreter.dll</HintPath>
+    </Reference>
     <Reference Include="System" />
     <Reference Include="Microsoft.CSharp" />
   </ItemGroup>
@@ -43,12 +46,6 @@
   </ItemGroup>
   <ItemGroup>
     <None Include="App.config" />
-  </ItemGroup>
-  <ItemGroup>
-    <ProjectReference Include="..\src\System.Linq.Expressions.Interpreter.csproj">
-      <Project>{0a5f5d0e-e4a5-4010-a86c-4721aacf78af}</Project>
-      <Name>System.Linq.Expressions.Interpreter</Name>
-    </ProjectReference>
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 

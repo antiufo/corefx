@@ -13,11 +13,11 @@ namespace System
     {
         public static bool BinaryExpression_IsLiftedLogical(BinaryExpression ex)
         {
-            Type type = ex.Left.Type;
-            Type type2 = ex.Right.Type;
+            var type = ex.Left.Type;
+            var type2 = ex.Right.Type;
             var method = ex.Method;
             ExpressionType nodeType = ex.NodeType;
-            return (nodeType == ExpressionType.AndAlso || nodeType == ExpressionType.OrElse) && TypeUtils_AreEquivalent(type2, type) && Type_IsNullableType(type) && method != null && TypeUtils_AreEquivalent(method.ReturnType, Type_GetNonNullableType(type));
+            return (nodeType == ExpressionType.AndAlso || nodeType == ExpressionType.OrElse) && TypeUtils_AreEquivalent(type2, type) && Type_IsNullableType(type.GetTypeInfo()) && method != null && TypeUtils_AreEquivalent(method.ReturnType, Type_GetNonNullableType(type.GetTypeInfo()));
         }
 
         public static Expression BinaryExpression_ReduceUserdefinedLifted(BinaryExpression b)
@@ -25,7 +25,7 @@ namespace System
             ParameterExpression parameterExpression = Expression.Parameter(b.Left.Type, "left");
             ParameterExpression parameterExpression2 = Expression.Parameter(b.Right.Type, "right");
             string name = (b.NodeType == ExpressionType.AndAlso) ? "op_False" : "op_True";
-            var booleanOperator = TypeUtils_GetBooleanOperator(b.Method.DeclaringType, name);
+            var booleanOperator = TypeUtils_GetBooleanOperator(b.Method.DeclaringType.GetTypeInfo(), name);
             Debug.Assert(booleanOperator != null);
             return Expression.Block(new ParameterExpression[]
             {
@@ -44,20 +44,20 @@ namespace System
             });
         }
 
-        private static MethodInfo TypeUtils_GetBooleanOperator(Type type, string name)
+        private static MethodInfo TypeUtils_GetBooleanOperator(TypeInfo type, string name)
         {
             MethodInfo methodValidated;
             while (true)
             {
-                methodValidated = GetMethodValidated(type, name, BindingFlags.Static | BindingFlags.Public | BindingFlags.NonPublic, null, new Type[]
+                methodValidated = GetMethodValidated(type.AsType(), name, new Type[]
                 {
-                    type
-                }, null);
+                    type.AsType()
+                });
                 if (methodValidated != null && methodValidated.IsSpecialName && !methodValidated.ContainsGenericParameters)
                 {
                     break;
                 }
-                type = type.BaseType;
+                type = type.BaseType.GetTypeInfo();
                 if (!(type != null))
                 {
                     return null;
@@ -67,9 +67,9 @@ namespace System
         }
 
         // System.Dynamic.Utils.TypeExtensions
-        internal static MethodInfo GetMethodValidated(Type type, string name, BindingFlags bindingAttr, Binder binder, Type[] types, ParameterModifier[] modifiers)
+        internal static MethodInfo GetMethodValidated(Type type, string name, Type[] types)
         {
-            MethodInfo method = type.GetMethod(name, bindingAttr, binder, types, modifiers);
+            MethodInfo method = type.GetMethod(name, types);
             if (!MethodInfo_MatchesArgumentTypes(method, types))
             {
                 return null;
@@ -90,7 +90,7 @@ namespace System
             }
             for (int i = 0; i < parameters.Length; i++)
             {
-                if (!TypeInfo_AreReferenceAssignable(parameters[i].ParameterType, argTypes[i]))
+                if (!TypeInfo_AreReferenceAssignable(parameters[i].ParameterType.GetTypeInfo(), argTypes[i].GetTypeInfo()))
                 {
                     return false;
                 }
@@ -98,29 +98,34 @@ namespace System
             return true;
         }
 
-        internal static bool TypeInfo_AreReferenceAssignable(Type dest, Type src)
+        internal static bool TypeInfo_AreReferenceAssignable(TypeInfo dest, TypeInfo src)
         {
-            return TypeUtils_AreEquivalent(dest, src) || (!dest.IsValueType && !src.IsValueType && dest.IsAssignableFrom(src));
+            return TypeUtils_AreEquivalent(dest.AsType(), src.AsType()) || (!dest.IsValueType && !src.IsValueType && dest.IsAssignableFrom(src));
         }
 
 
-        private static bool Type_IsNullableType(Type type)
+        private static bool Type_IsNullableType(TypeInfo type)
         {
             return type.IsGenericType && type.GetGenericTypeDefinition() == typeof(Nullable<>);
         }
 
-        private static Type Type_GetNonNullableType(Type type)
+        public static Type Type_GetNonNullableType(Type type)
+        {
+            return Type_GetNonNullableType(type.GetTypeInfo());
+        }
+
+        public static Type Type_GetNonNullableType(TypeInfo type)
         {
             if (Type_IsNullableType(type))
             {
-                return type.GetGenericArguments()[0];
+                return type.GenericTypeArguments.First();
             }
-            return type;
+            return type.AsType();
         }
 
         private static bool TypeUtils_AreEquivalent(Type t1, Type t2)
         {
-            return t1 == t2 || t1.IsEquivalentTo(t2);
+            return t1 == t2;//|| t1.IsEquivalentTo(t2);
         }
     }
 }

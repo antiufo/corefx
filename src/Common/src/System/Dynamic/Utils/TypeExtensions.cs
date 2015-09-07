@@ -3,6 +3,15 @@
 
 using System.Reflection;
 
+#if CORECLR
+namespace System.Runtime.CompilerServices {
+    internal interface IRuntimeVariables
+    {
+        object this[int index] { get; set; }
+        int Count { get; }
+    }
+}
+#endif
 namespace System.Dynamic.Utils
 {
     // Extensions on System.Type and friends
