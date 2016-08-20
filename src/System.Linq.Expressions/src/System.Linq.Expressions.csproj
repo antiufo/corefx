@@ -7,21 +7,6 @@
   </PropertyGroup>
   <PropertyGroup>
     <ProjectGuid>{AEF718E9-D4FC-418F-A7AE-ED6B2C7B3787}</ProjectGuid>
-<<<<<<< HEAD
-    <OutputType>Library</OutputType>
-    <AssemblyName>System.Linq.Expressions.Interpreter</AssemblyName>
-    <RootNamespace>System.Linq.Expressions</RootNamespace>
-    <AssemblyVersion>4.0.11.0</AssemblyVersion>
-    <TargetFrameworkVersion>v4.6</TargetFrameworkVersion>
-    <TargetFrameworkProfile>Profile44</TargetFrameworkProfile>
-    <!--<DefineConstants Condition=" '$(IsInterpreting)' != 'true' ">$(DefineConstants);FEATURE_CORECLR</DefineConstants>-->
-  </PropertyGroup>
-  <!-- Default configurations to help VS understand the configurations -->
-  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
-    <DefineConstants>,DEBUG,TRACE;DEBUGRESOURCES;SIGNED;</DefineConstants>
-  </PropertyGroup>
-  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
-=======
     <AssemblyName>System.Linq.Expressions</AssemblyName>
     <RootNamespace>System.Linq.Expressions</RootNamespace>
     <AssemblyVersion>4.1.1.0</AssemblyVersion>
@@ -47,7 +32,6 @@
     <ProjectJson>netcore50/project.json</ProjectJson>
     <ProjectLockJson>netcore50/project.lock.json</ProjectLockJson>
     <DefineConstants>$(DefineConstants);FEATURE_DYNAMIC_DELEGATE</DefineConstants>
->>>>>>> refs/remotes/dotnet/master
   </PropertyGroup>
   <ItemGroup Condition="'$(TargetGroup)' == 'netcore50aot'">
     <EmbeddedResource Include="Resources\$(AssemblyName).rd.xml" />
@@ -193,14 +177,10 @@
     <Compile Include="System\Runtime\CompilerServices\IRuntimeVariables.cs" />
     <None Include="project.json" />
   </ItemGroup>
-<<<<<<< HEAD
-  <!--<ItemGroup Condition=" '$(IsInterpreting)' != 'true' ">
-=======
   <ItemGroup Condition=" '$(IsInterpreting)' != 'true' And '$(TargetGroup)' != 'net463'">
     <Compile Include="$(CommonPath)\System\Collections\Generic\ReferenceEqualityComparer.cs">
       <Link>Common\System\Collections\Generic\ReferenceEqualityComparer.cs</Link>
     </Compile>
->>>>>>> refs/remotes/dotnet/master
     <Compile Include="$(CommonPath)\System\Dynamic\Utils\CollectionExtensions.AddFirst.cs">
       <Link>Common\System\Dynamic\Utils\CollectionExtensions.AddFirst.cs</Link>
     </Compile>
@@ -238,15 +218,6 @@
     <Compile Include="System\Runtime\CompilerServices\Closure.cs" />
     <Compile Include="System\Runtime\CompilerServices\RuntimeOps.ExpressionQuoter.cs" />
     <Compile Include="System\Runtime\CompilerServices\RuntimeOps.RuntimeVariableList.cs" />
-<<<<<<< HEAD
-  </ItemGroup>-->
-  <ItemGroup>
-    <!-- Condition=" '$(IsInterpreting)' == 'true' ">-->
-    <Compile Include="$(CommonPath)\System\Dynamic\Utils\DelegateHelpers.cs">
-      <Link>Common\System\Dynamic\Utils\DelegateHelpers.cs</Link>
-    </Compile>
-    <Compile Include="System\Linq\Expressions\Compiler\DelegateHelpers.Generated.cs" />
-=======
   </ItemGroup>
   <ItemGroup Condition=" ('$(IsInterpreting)' == 'true' Or '$(FeatureInterpret)' == 'true') And '$(TargetGroup)' != 'net463' ">
     <Compile Include="$(CommonPath)\System\Dynamic\Utils\DelegateHelpers.cs">
@@ -288,7 +259,6 @@
   <ItemGroup Condition="'$(TargetGroup)' == 'net463'">
     <TargetingPackReference Include="mscorlib" />
     <TargetingPackReference Include="System.Core" />
->>>>>>> refs/remotes/dotnet/master
   </ItemGroup>
   <Import Project="$([MSBuild]::GetDirectoryNameOfFileAbove($(MSBuildThisFileDirectory), dir.targets))\dir.targets" />
 </Project>
