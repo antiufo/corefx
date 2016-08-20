@@ -267,3 +267,4 @@ Session.vim
 # Private test configuration and binaries.
 config.ps1
 **/IISApplications
+src/System.Linq.Expressions/src/Shaman.System.Linq.Expressions.Interpreter/project.lock.json

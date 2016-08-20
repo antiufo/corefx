@@ -521,7 +521,7 @@ namespace System.Linq.Expressions.Interpreter
         {
             var node = (BlockExpression)expr;
 
-            if (node.ExpressionCount != 0)
+            if (node.Expressions.Count != 0)
             {
                 var end = CompileBlockStart(node);
 
@@ -583,7 +583,7 @@ namespace System.Linq.Expressions.Interpreter
             }
 
             // indexes, byref args not allowed.
-            for (int i = 0, n = index.ArgumentCount; i < n; i++)
+            for (int i = 0, n = index.Arguments.Count; i < n; i++)
             {
                 Compile(index.GetArgument(i));
             }
@@ -597,7 +597,7 @@ namespace System.Linq.Expressions.Interpreter
             {
                 _instructions.EmitCall(index.Indexer.GetGetMethod(true));
             }
-            else if (index.ArgumentCount != 1)
+            else if (index.Arguments.Count != 1)
             {
                 _instructions.EmitCall(index.Object.Type.GetMethod("Get", BindingFlags.Public | BindingFlags.Instance));
             }
@@ -618,7 +618,7 @@ namespace System.Linq.Expressions.Interpreter
             }
 
             // indexes, byref args not allowed.
-            for (int i = 0, n = index.ArgumentCount; i < n; i++)
+            for (int i = 0, n = index.Arguments.Count; i < n; i++)
             {
                 Compile(index.GetArgument(i));
             }
@@ -636,7 +636,7 @@ namespace System.Linq.Expressions.Interpreter
             {
                 _instructions.EmitCall(index.Indexer.GetSetMethod(true));
             }
-            else if (index.ArgumentCount != 1)
+            else if (index.Arguments.Count != 1)
             {
                 _instructions.EmitCall(index.Object.Type.GetMethod("Set", BindingFlags.Public | BindingFlags.Instance));
             }
@@ -1756,7 +1756,7 @@ namespace System.Linq.Expressions.Interpreter
             return ReferenceLabel(target).GetLabel(this);
         }
 
-        public void PushLabelBlock(LabelScopeKind type)
+        internal void PushLabelBlock(LabelScopeKind type)
         {
             _labelBlock = new LabelScopeInfo(_labelBlock, type);
         }
@@ -2273,7 +2273,7 @@ namespace System.Linq.Expressions.Interpreter
                             }
 
                             List<LocalDefinition> indexLocals = new List<LocalDefinition>();
-                            for (int i = 0; i < indexNode.ArgumentCount; i++)
+                            for (int i = 0; i < indexNode.Arguments.Count; i++)
                             {
                                 var arg = indexNode.GetArgument(i);
                                 Compile(arg);
@@ -2289,7 +2289,7 @@ namespace System.Linq.Expressions.Interpreter
 
                             return new IndexMethodByRefUpdater(objTmp, indexLocals.ToArray(), indexNode.Indexer.GetSetMethod(), index);
                         }
-                        else if (indexNode.ArgumentCount == 1)
+                        else if (indexNode.Arguments.Count == 1)
                         {
                             return CompileArrayIndexAddress(indexNode.Object, indexNode.GetArgument(0), index);
                         }

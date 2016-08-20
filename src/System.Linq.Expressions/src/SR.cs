@@ -527,6 +527,27 @@ namespace System
         internal static string OperatorNotImplementedForType {
               get { return SR.GetResourceString("OperatorNotImplementedForType", null); }
         }
+        internal static string TypeMustNotBePointer {
+              get { return SR.GetResourceString("TypeMustNotBePointer", null); }
+        }
+        internal static string NonStaticConstructorRequired {
+              get { return SR.GetResourceString("NonStaticConstructorRequired", null); }
+        }
+        internal static string NonAbstractConstructorRequired {
+              get { return SR.GetResourceString("NonAbstractConstructorRequired", null); }
+        }
+        internal static string HomogeneousAppDomainRequired {
+              get { return SR.GetResourceString("HomogeneousAppDomainRequired", null); }
+        }
+        internal static string ArgumentMustBeFieldInfoOrPropertyInfo {
+              get { return SR.GetResourceString("ArgumentMustBeFieldInfoOrPropertyInfo", null); }
+        }
+        internal static string ArgumentMustBeFieldInfoOrPropertyInfoOrMethod {
+              get { return SR.GetResourceString("ArgumentMustBeFieldInfoOrPropertyInfoOrMethod", null); }
+        }
+        internal static string PropertyTypeMustMatchSetter {
+              get { return SR.GetResourceString("PropertyTypeMustMatchSetter", null); }
+        }
 #else
         internal static string ReducibleMustOverrideReduce {
               get { return SR.GetResourceString("ReducibleMustOverrideReduce", @"reducible nodes must override Expression.Reduce()"); }
@@ -1047,6 +1068,36 @@ namespace System
         internal static string OperatorNotImplementedForType {
               get { return SR.GetResourceString("OperatorNotImplementedForType", @"The operator '{0}' is not implemented for type '{1}'"); }
         }
+        internal static string TypeMustNotBePointer {
+              get { return SR.GetResourceString("TypeMustNotBePointer", @"Type must not be a pointer type"); }
+        }
+        internal static string NonStaticConstructorRequired {
+              get { return SR.GetResourceString("NonStaticConstructorRequired", @"The constructor should not be static"); }
+        }
+        internal static string NonAbstractConstructorRequired {
+              get { return SR.GetResourceString("NonAbstractConstructorRequired", @"Can't compile a NewExpression with a constructor declared on an abstract class"); }
+        }
+        internal static string HomogeneousAppDomainRequired {
+              get { return SR.GetResourceString("HomogeneousAppDomainRequired", @"Dynamic operations can only be performed in homogeneous AppDomain."); }
+        }
+        internal static string ArgumentMustBeFieldInfoOrPropertyInfo {
+              get { return SR.GetResourceString("ArgumentMustBeFieldInfoOrPropertyInfo", @"Argument must be either a FieldInfo or PropertyInfo"); }
+        }
+        internal static string ArgumentMustBeFieldInfoOrPropertyInfoOrMethod {
+              get { return SR.GetResourceString("ArgumentMustBeFieldInfoOrPropertyInfoOrMethod", @"Argument must be either a FieldInfo, PropertyInfo or MethodInfo"); }
+        }
+        internal static string PropertyTypeMustMatchSetter {
+              get { return SR.GetResourceString("PropertyTypeMustMatchSetter", @"Property type must match the value type of setter"); }
+        }
+        internal static string NonStaticConstructorRequired {
+              get { return SR.GetResourceString("NonStaticConstructorRequired", @"The constructor should not be static"); }
+        }
+
+        
+
+        
+
+        
 
 #endif
         internal static Type ResourceType {
