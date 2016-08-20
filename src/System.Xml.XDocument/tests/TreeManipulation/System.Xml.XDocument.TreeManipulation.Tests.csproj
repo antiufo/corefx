@@ -8,6 +8,9 @@
     <OutputType>Library</OutputType>
     <AssemblyName>System.Xml.XDocument.TreeManipulation.Tests</AssemblyName>
     <RootNamespace>XLinqTests</RootNamespace>
+    <!-- Don't allow project reference to package dependency conversion -->
+    <KeepAllProjectReferences>true</KeepAllProjectReferences>
+    <NugetTargetMoniker>.NETStandard,Version=v1.3</NugetTargetMoniker>
   </PropertyGroup>
   <!-- Default configurations to help VS understand the configurations -->
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
@@ -55,15 +58,15 @@
     <Compile Include="XObjectsTests.cs" />
   </ItemGroup>
   <ItemGroup>
-    <ProjectReference Include="$(CommonTestPath)\SystemXml\ModuleCore\ModuleCore.csproj">
+    <ProjectReference Include="$(CommonTestPath)\System\Xml\ModuleCore\ModuleCore.csproj">
       <Project>{3cf0cc76-4ce0-460a-ba37-657cfed39ab0}</Project>
       <Name>ModuleCore</Name>
     </ProjectReference>
-    <ProjectReference Include="$(CommonTestPath)\SystemXml\XmlCoreTest\XmlCoreTest.csproj">
+    <ProjectReference Include="$(CommonTestPath)\System\Xml\XmlCoreTest\XmlCoreTest.csproj">
       <Project>{89701565-f68b-46d9-bd78-95b0f052c50b}</Project>
       <Name>XmlCoreTest</Name>
     </ProjectReference>
-    <ProjectReference Include="$(CommonTestPath)\SystemXml\XmlDiff\XmlDiff.csproj">
+    <ProjectReference Include="$(CommonTestPath)\System\Xml\XmlDiff\XmlDiff.csproj">
       <Project>{466d87df-bdec-4e6c-bacd-317d79b8edbe}</Project>
       <Name>XmlDiff</Name>
     </ProjectReference>

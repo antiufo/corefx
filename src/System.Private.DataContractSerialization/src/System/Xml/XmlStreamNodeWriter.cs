@@ -1,16 +1,12 @@
-// Copyright (c) Microsoft. All rights reserved.
-// Licensed under the MIT license. See LICENSE file in the project root for full license information.
-//------------------------------------------------------------
-//------------------------------------------------------------
+// Licensed to the .NET Foundation under one or more agreements.
+// The .NET Foundation licenses this file to you under the MIT license.
+// See the LICENSE file in the project root for more information.
 
 using System.IO;
-using System.Collections.Generic;
 using System.Text;
-using System.Diagnostics;
-using System.Globalization;
 using System.Runtime.Serialization;
 using System.Security;
-
+using System.Threading.Tasks;
 
 namespace System.Xml
 {
@@ -21,7 +17,6 @@ namespace System.Xml
         private int _offset;
         private bool _ownsStream;
         private const int bufferLength = 512;
-        private const int maxEntityLength = 32;
         private const int maxBytesPerChar = 3;
         private Encoding _encoding;
         private static UTF8Encoding s_UTF8Encoding = new UTF8Encoding(false, true);
@@ -111,6 +106,30 @@ namespace System.Xml
             return _buffer;
         }
 
+        protected async Task<BytesWithOffset> GetBufferAsync(int count)
+        {
+            int offset;
+            DiagnosticUtility.DebugAssert(count >= 0 && count <= bufferLength, "");
+            int bufferOffset = _offset;
+            if (bufferOffset + count <= bufferLength)
+            {
+                offset = bufferOffset;
+            }
+            else
+            {
+                await FlushBufferAsync().ConfigureAwait(false);
+                offset = 0;
+            }
+#if DEBUG
+            DiagnosticUtility.DebugAssert(offset + count <= bufferLength, "");
+            for (int i = 0; i < count; i++)
+            {
+                _buffer[offset + i] = (byte)'<';
+            }
+#endif
+            return new BytesWithOffset(_buffer, offset);
+        }
+
         protected void Advance(int count)
         {
             DiagnosticUtility.DebugAssert(_offset + count <= bufferLength, "");
@@ -131,10 +150,35 @@ namespace System.Xml
             _buffer[_offset++] = b;
         }
 
+        protected Task WriteByteAsync(byte b)
+        {
+            if (_offset >= bufferLength)
+            {
+                return FlushBufferAndWriteByteAsync(b);
+            }
+            else
+            {
+                _buffer[_offset++] = b;
+                return Task.CompletedTask;
+            }
+        }
+
+        private async Task FlushBufferAndWriteByteAsync(byte b)
+        {
+            await FlushBufferAsync().ConfigureAwait(false);
+            _buffer[_offset++] = b;
+        }
+
         protected void WriteByte(char ch)
         {
             DiagnosticUtility.DebugAssert(ch < 0x80, "");
             WriteByte((byte)ch);
+        }
+
+        protected Task WriteByteAsync(char ch)
+        {
+            DiagnosticUtility.DebugAssert(ch < 0x80, "");
+            return WriteByteAsync((byte)ch);
         }
 
         protected void WriteBytes(byte b1, byte b2)
@@ -151,10 +195,37 @@ namespace System.Xml
             _offset += 2;
         }
 
+        protected Task WriteBytesAsync(byte b1, byte b2)
+        {
+            if (_offset + 1 >= bufferLength)
+            {
+                return FlushAndWriteBytesAsync(b1, b2);
+            }
+            else
+            {
+                _buffer[_offset++] = b1;
+                _buffer[_offset++] = b2;
+                return Task.CompletedTask;
+            }
+        }
+
+        private async Task FlushAndWriteBytesAsync(byte b1, byte b2)
+        {
+            await FlushBufferAsync().ConfigureAwait(false);
+            _buffer[_offset++] = b1;
+            _buffer[_offset++] = b2;
+        }
+
         protected void WriteBytes(char ch1, char ch2)
         {
             DiagnosticUtility.DebugAssert(ch1 < 0x80 && ch2 < 0x80, "");
             WriteBytes((byte)ch1, (byte)ch2);
+        }
+
+        protected Task WriteBytesAsync(char ch1, char ch2)
+        {
+            DiagnosticUtility.DebugAssert(ch1 < 0x80 && ch2 < 0x80, "");
+            return WriteBytesAsync((byte)ch1, (byte)ch2);
         }
 
         public void WriteBytes(byte[] byteBuffer, int byteOffset, int byteCount)
@@ -393,12 +464,7 @@ namespace System.Xml
                             chars++;
                         }
 
-                        string tmp = new string(charsStart, 0, (int)(chars - charsStart));
-                        byte[] newBytes = _encoding != null ? _encoding.GetBytes(tmp) : s_UTF8Encoding.GetBytes(tmp);
-                        int toCopy = Math.Min(newBytes.Length, (int)(bytesMax - bytes));
-                        Array.Copy(newBytes, 0, buffer, (int)(bytes - _bytes) + offset, toCopy);
-
-                        bytes += toCopy;
+                        bytes += (_encoding ?? s_UTF8Encoding).GetBytes(charsStart, (int)(chars - charsStart), bytes, (int)(bytesMax - bytes));
 
                         if (chars >= charsMax)
                             break;
@@ -419,10 +485,28 @@ namespace System.Xml
             }
         }
 
+        protected virtual Task FlushBufferAsync()
+        {
+            if (_offset != 0)
+            {
+                var task = _stream.WriteAsync(_buffer, 0, _offset);
+                _offset = 0;
+                return task;
+            }
+
+            return Task.CompletedTask;
+        }
+
         public override void Flush()
         {
             FlushBuffer();
             _stream.Flush();
+        }
+
+        public override async Task FlushAsync()
+        {
+            await FlushBufferAsync().ConfigureAwait(false);
+            await _stream.FlushAsync().ConfigureAwait(false);
         }
 
         public override void Close()

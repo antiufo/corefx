@@ -1,5 +1,6 @@
-// Copyright (c) Microsoft. All rights reserved.
-// Licensed under the MIT license. See LICENSE file in the project root for full license information.
+// Licensed to the .NET Foundation under one or more agreements.
+// The .NET Foundation licenses this file to you under the MIT license.
+// See the LICENSE file in the project root for more information.
 
 using System;
 using System.Diagnostics;
@@ -447,17 +448,6 @@ namespace CoreXml.Test.XLinq
                 if (counter++ % howoften == 0) yield return default(T);
                 yield return t;
             }
-        }
-
-        public static int IndexOf<T>(this IEnumerable<T> iter, T node)
-        {
-            int pos = 0;
-            foreach (T n in iter)
-            {
-                if ((n == null && node == null) || n.Equals(node)) return pos;
-                pos++;
-            }
-            return -1;
         }
 
         public static bool CheckDTDAfterElement(this IEnumerable<object> newNodes)

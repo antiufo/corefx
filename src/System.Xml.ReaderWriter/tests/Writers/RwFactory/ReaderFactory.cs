@@ -1,16 +1,13 @@
-﻿// Copyright (c) Microsoft. All rights reserved.
-// Licensed under the MIT license. See LICENSE file in the project root for full license information.
+// Licensed to the .NET Foundation under one or more agreements.
+// The .NET Foundation licenses this file to you under the MIT license.
+// See the LICENSE file in the project root for more information.
 
-using System;
+using OLEDB.Test.ModuleCore;
 using System.IO;
 using System.Text;
-using System.Xml;
-using System.Xml.Schema;
-using OLEDB.Test.ModuleCore;
-using Webdata.Test.XmlDriver;
 using XmlCoreTest.Common;
 
-namespace RWFactory
+namespace System.Xml.Tests
 {
     public partial class CReaderFactory : CFactory
     {
@@ -171,10 +168,10 @@ namespace RWFactory
 
                 if (!IsVariationValid)
                 {
-                    //Invalid Case didnt throw exception.
+                    //Invalid Case didn't throw exception.
                     pstate = TestState.Error;
                     DumpVariationInfo();
-                    throw new CTestFailedException("Invalid Variation didnt throw exception");
+                    throw new CTestFailedException("Invalid Variation didn't throw exception");
                 }
                 else
                 {
@@ -254,9 +251,9 @@ namespace RWFactory
         /// an enum which can be set using the spec file data</param>
         protected void CreateReader(ReadThru readThru)
         {
-            //Assumption is that the Create method doesnt throw NullReferenceException and
-            //it is not the goal of this framework to test if they are thrown anywhere.
-            //but if they are thrown thats a problem and they shouldnt be caught but exposed.
+            // Assumption is that the Create method doesn't throw NullReferenceException and
+            // it is not the goal of this framework to test if they are thrown anywhere.
+            // but if they are thrown that's a problem and they shouldn't be caught but exposed.
             try
             {
                 switch (readThru)

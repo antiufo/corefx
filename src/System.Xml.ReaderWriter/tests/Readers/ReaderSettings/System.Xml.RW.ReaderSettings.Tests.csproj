@@ -8,6 +8,7 @@
     <OutputType>Library</OutputType>
     <AssemblyName>System.Xml.RW.ReaderSettings.Tests</AssemblyName>
     <RootNamespace>XmlReaderTest.ReaderSettingsTest</RootNamespace>
+    <NugetTargetMoniker>.NETStandard,Version=v1.3</NugetTargetMoniker>
   </PropertyGroup>
   <!-- Default configurations to help VS understand the configurations -->
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
@@ -38,26 +39,27 @@
     <Service Include="{82A7F48D-3B50-4B1E-B82E-3ADA8210C358}" />
   </ItemGroup>
   <ItemGroup>
-    <ProjectReference Include="$(CommonTestPath)\SystemXml\BaseLibManaged\BaseLibManaged.csproj">
+    <ProjectReference Include="$(CommonTestPath)\System\Xml\BaseLibManaged\BaseLibManaged.csproj">
       <Project>{42f10363-c2a2-42b5-b7b9-1b5dbb0bc71e}</Project>
       <Name>BaseLibManaged</Name>
     </ProjectReference>
-    <ProjectReference Include="$(CommonTestPath)\SystemXml\ModuleCore\ModuleCore.csproj">
+    <ProjectReference Include="$(CommonTestPath)\System\Xml\ModuleCore\ModuleCore.csproj">
       <Project>{3cf0cc76-4ce0-460a-ba37-657cfed39ab0}</Project>
       <Name>ModuleCore</Name>
     </ProjectReference>
-    <ProjectReference Include="$(CommonTestPath)\SystemXml\XmlCoreTest\XmlCoreTest.csproj">
+    <ProjectReference Include="$(CommonTestPath)\System\Xml\XmlCoreTest\XmlCoreTest.csproj">
       <Project>{89701565-f68b-46d9-bd78-95b0f052c50b}</Project>
       <Name>XmlCoreTest</Name>
     </ProjectReference>
-    <ProjectReference Include="..\..\..\src\System.Xml.ReaderWriter.csproj">
+    <ProjectReference Include="..\..\..\pkg\System.Xml.ReaderWriter.pkgproj">
       <Project>{c559743a-762e-4d9d-b986-e77bdb97652e}</Project>
       <Name>System.Xml.ReaderWriter</Name>
     </ProjectReference>
     <ProjectReference Include="..\..\XmlReaderLib\System.Xml.RW.XmlReaderLib.csproj">
       <Project>{6d9b0285-5e8a-4c20-9c53-9e2084ef64c4}</Project>
       <Name>System.Xml.RW.XmlReaderLib</Name>
-    </ProjectReference>
+      <KeepProjectReference>true</KeepProjectReference>
+   </ProjectReference>
   </ItemGroup>
   <ItemGroup>
     <None Include="project.json" />

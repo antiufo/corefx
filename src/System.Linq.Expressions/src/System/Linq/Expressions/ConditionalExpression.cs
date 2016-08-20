@@ -1,9 +1,12 @@
-// Copyright (c) Microsoft. All rights reserved.
-// Licensed under the MIT license. See LICENSE file in the project root for full license information.
+// Licensed to the .NET Foundation under one or more agreements.
+// The .NET Foundation licenses this file to you under the MIT license.
+// See the LICENSE file in the project root for more information.
 
 using System;
 using System.Dynamic.Utils;
 using System.Diagnostics;
+
+using AstUtils = System.Linq.Expressions.Utils;
 
 namespace System.Linq.Expressions
 {
@@ -81,7 +84,8 @@ namespace System.Linq.Expressions
 
         internal virtual Expression GetFalse()
         {
-            return Expression.Empty();
+            // Using a singleton here to ensure a stable object identity for IfFalse, which Update relies on.
+            return AstUtils.Empty();
         }
 
         /// <summary>
@@ -156,13 +160,13 @@ namespace System.Linq.Expressions
         /// and <see cref="P:ConditionalExpression.IfFalse"/> properties set to the specified values.</returns>
         public static ConditionalExpression Condition(Expression test, Expression ifTrue, Expression ifFalse)
         {
-            RequiresCanRead(test, "test");
-            RequiresCanRead(ifTrue, "ifTrue");
-            RequiresCanRead(ifFalse, "ifFalse");
+            RequiresCanRead(test, nameof(test));
+            RequiresCanRead(ifTrue, nameof(ifTrue));
+            RequiresCanRead(ifFalse, nameof(ifFalse));
 
             if (test.Type != typeof(bool))
             {
-                throw Error.ArgumentMustBeBoolean();
+                throw Error.ArgumentMustBeBoolean(nameof(test));
             }
             if (!TypeUtils.AreEquivalent(ifTrue.Type, ifFalse.Type))
             {
@@ -188,14 +192,14 @@ namespace System.Linq.Expressions
         /// reference assignable to the result type. The <paramref name="type"/> is allowed to be <see cref="System.Void"/>.</remarks>
         public static ConditionalExpression Condition(Expression test, Expression ifTrue, Expression ifFalse, Type type)
         {
-            RequiresCanRead(test, "test");
-            RequiresCanRead(ifTrue, "ifTrue");
-            RequiresCanRead(ifFalse, "ifFalse");
-            ContractUtils.RequiresNotNull(type, "type");
+            RequiresCanRead(test, nameof(test));
+            RequiresCanRead(ifTrue, nameof(ifTrue));
+            RequiresCanRead(ifFalse, nameof(ifFalse));
+            ContractUtils.RequiresNotNull(type, nameof(type));
 
             if (test.Type != typeof(bool))
             {
-                throw Error.ArgumentMustBeBoolean();
+                throw Error.ArgumentMustBeBoolean(nameof(test));
             }
 
             if (type != typeof(void))

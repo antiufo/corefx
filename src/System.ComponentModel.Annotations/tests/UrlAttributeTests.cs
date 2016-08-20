@@ -1,5 +1,6 @@
-﻿// Copyright (c) Microsoft. All rights reserved.
-// Licensed under the MIT license. See LICENSE file in the project root for full license information.
+// Licensed to the .NET Foundation under one or more agreements.
+// The .NET Foundation licenses this file to you under the MIT license.
+// See the LICENSE file in the project root for more information.
 
 using Xunit;
 
@@ -33,10 +34,8 @@ namespace System.ComponentModel.DataAnnotations
         {
             var attribute = new UrlAttribute();
 
-            Assert.Throws<ValidationException>(() => attribute.Validate("file:///foo.bar", s_testValidationContext));
-            Assert.Throws<ValidationException>(() => attribute.Validate("http://user%password@foo.bar/", s_testValidationContext));
-            Assert.Throws<ValidationException>(() => attribute.Validate("foo.png", s_testValidationContext));
-            Assert.Throws<ValidationException>(() => attribute.Validate("http://foo\0.bar", s_testValidationContext)); // Illegal character
+            Assert.Throws<ValidationException>(() => attribute.Validate("file:///foo.bar", s_testValidationContext)); // file scheme
+            Assert.Throws<ValidationException>(() => attribute.Validate("foo.png", s_testValidationContext)); // no scheme
         }
 
         [Fact]

@@ -1,5 +1,6 @@
-// Copyright (c) Microsoft. All rights reserved.
-// Licensed under the MIT license. See LICENSE file in the project root for full license information.
+// Licensed to the .NET Foundation under one or more agreements.
+// The .NET Foundation licenses this file to you under the MIT license.
+// See the LICENSE file in the project root for more information.
 
 using System;
 using System.Collections.Generic;
@@ -174,12 +175,12 @@ namespace Microsoft.CSharp.RuntimeBinder
                 Type curType = obj.RuntimeType;
                 while (curType != null)
                 {
-                    if (curType.GetTypeInfo().Attributes.HasFlag(System.Reflection.TypeAttributes.WindowsRuntime))
+                    if ((curType.GetTypeInfo().Attributes & TypeAttributes.WindowsRuntime) == TypeAttributes.WindowsRuntime)
                     {
                         // Found a WinRT COM object
                         return true;
                     }
-                    if (curType.GetTypeInfo().Attributes.HasFlag(System.Reflection.TypeAttributes.Import))
+                    if ((curType.GetTypeInfo().Attributes & TypeAttributes.Import) == TypeAttributes.Import)
                     {
                         // Found a class that is actually imported from COM but not WinRT
                         // this is definitely a non-WinRT COM object
@@ -195,7 +196,10 @@ namespace Microsoft.CSharp.RuntimeBinder
 
         private static bool IsTransparentProxy(object obj)
         {
-            return obj != null; 
+            // In the full framework, this checks:
+            //     return obj != null && RemotingServices.IsTransparentProxy(obj);
+            // but transparent proxies don't exist in .NET Core.
+            return false;
         }
 
         /////////////////////////////////////////////////////////////////////////////////

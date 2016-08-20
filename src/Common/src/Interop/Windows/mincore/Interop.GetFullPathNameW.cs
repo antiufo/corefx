@@ -1,18 +1,18 @@
-// Copyright (c) Microsoft. All rights reserved.
-// Licensed under the MIT license. See LICENSE file in the project root for full license information.
+// Licensed to the .NET Foundation under one or more agreements.
+// The .NET Foundation licenses this file to you under the MIT license.
+// See the LICENSE file in the project root for more information.
 
 using System;
 using System.Runtime.InteropServices;
-using System.Text;
 
-partial class Interop
+internal partial class Interop
 {
-    partial class mincore
+    internal partial class mincore
     {
-        [DllImport(Libraries.CoreFile_L1, SetLastError = true, CharSet = CharSet.Unicode, BestFitMapping = false)]
-        internal unsafe static extern int GetFullPathNameW(char* path, int numBufferChars, char* buffer, IntPtr mustBeZero);
-
-        [DllImport(Libraries.CoreFile_L1, SetLastError = true, CharSet = CharSet.Unicode, BestFitMapping = false)]
-        internal static extern int GetFullPathNameW(string path, int numBufferChars, [Out]StringBuilder buffer, IntPtr mustBeZero);
+        /// <summary>
+        /// WARNING: This method does not implicitly handle long paths. Use GetFullPathName or PathHelper.
+        /// </summary>
+        [DllImport(Libraries.CoreFile_L1, SetLastError = true, CharSet = CharSet.Unicode, BestFitMapping = false, ExactSpelling = true)]
+        unsafe internal static extern uint GetFullPathNameW(char* path, uint numBufferChars, SafeHandle buffer, IntPtr mustBeZero);
     }
 }

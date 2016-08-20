@@ -1,5 +1,6 @@
-// Copyright (c) Microsoft. All rights reserved.
-// Licensed under the MIT license. See LICENSE file in the project root for full license information.
+// Licensed to the .NET Foundation under one or more agreements.
+// The .NET Foundation licenses this file to you under the MIT license.
+// See the LICENSE file in the project root for more information.
 
 using System;
 using System.Collections.Generic;
@@ -140,7 +141,7 @@ namespace System.Linq.Expressions.Interpreter
 
         public static bool IsInterpretedFrame(MethodBase method)
         {
-            //ContractUtils.RequiresNotNull(method, "method");
+            //ContractUtils.RequiresNotNull(method, nameof(method));
             return method.DeclaringType == typeof(Interpreter) && method.Name == "Run";
         }
 
@@ -263,24 +264,6 @@ namespace System.Linq.Expressions.Interpreter
         {
             _pendingValue = Pop();
             _pendingContinuation = (int)Pop();
-        }
-
-        private static MethodInfo s_goto;
-        private static MethodInfo s_voidGoto;
-
-        internal static MethodInfo GotoMethod
-        {
-            get { return s_goto ?? (s_goto = typeof(InterpretedFrame).GetMethod("Goto")); }
-        }
-
-        internal static MethodInfo VoidGotoMethod
-        {
-            get { return s_voidGoto ?? (s_voidGoto = typeof(InterpretedFrame).GetMethod("VoidGoto")); }
-        }
-
-        public int VoidGoto(int labelIndex)
-        {
-            return Goto(labelIndex, Interpreter.NoValue, gotoExceptionHandler: false);
         }
 
         public int Goto(int labelIndex, object value, bool gotoExceptionHandler)

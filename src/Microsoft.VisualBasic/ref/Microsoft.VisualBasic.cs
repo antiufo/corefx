@@ -1,5 +1,6 @@
-// Copyright (c) Microsoft. All rights reserved.
-// Licensed under the MIT license. See LICENSE file in the project root for full license information.
+// Licensed to the .NET Foundation under one or more agreements.
+// The .NET Foundation licenses this file to you under the MIT license.
+// See the LICENSE file in the project root for more information.
 // ------------------------------------------------------------------------------
 // Changes to this file must follow the http://aka.ms/api-review process.
 // ------------------------------------------------------------------------------
@@ -23,6 +24,7 @@ namespace Microsoft.VisualBasic
         public const string vbCrLf = "\r\n";
         public const string vbFormFeed = "\f";
         public const string vbLf = "\n";
+        [System.Obsolete("For a carriage return and line feed, use vbCrLf.  For the current platform's newline, use System.Environment.NewLine.")]
         public const string vbNewLine = "\r\n";
         public const string vbNullChar = "\0";
         public const string vbNullString = null;

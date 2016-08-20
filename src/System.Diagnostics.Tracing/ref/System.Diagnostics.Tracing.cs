@@ -1,5 +1,6 @@
-// Copyright (c) Microsoft. All rights reserved.
-// Licensed under the MIT license. See LICENSE file in the project root for full license information.
+// Licensed to the .NET Foundation under one or more agreements.
+// The .NET Foundation licenses this file to you under the MIT license.
+// See the LICENSE file in the project root for more information.
 // ------------------------------------------------------------------------------
 // Changes to this file must follow the http://aka.ms/api-review process.
 // ------------------------------------------------------------------------------
@@ -52,6 +53,10 @@ namespace System.Diagnostics.Tracing
         public System.Diagnostics.Tracing.EventCommand Command { get { return default(System.Diagnostics.Tracing.EventCommand); } }
         public bool DisableEvent(int eventId) { return default(bool); }
         public bool EnableEvent(int eventId) { return default(bool); }
+    }
+    public class EventCounter {
+        public EventCounter(string name, EventSource eventSource) { }
+        public void WriteMetric(float value) { }
     }
     [System.AttributeUsageAttribute((System.AttributeTargets)(12), Inherited = false)]
     public partial class EventDataAttribute : System.Attribute
@@ -153,10 +158,11 @@ namespace System.Diagnostics.Tracing
         public EventSource(string eventSourceName, System.Diagnostics.Tracing.EventSourceSettings config) { }
         public EventSource(string eventSourceName, System.Diagnostics.Tracing.EventSourceSettings config, params string[] traits) { }
         public System.Exception ConstructionException { get { return default(System.Exception); } }
-        public static System.Guid CurrentThreadActivityId {[System.Security.SecurityCriticalAttribute]get { return default(System.Guid); } }
+        public static System.Guid CurrentThreadActivityId {[System.Security.SecuritySafeCriticalAttribute]get { return default(System.Guid); } }
         public System.Guid Guid { get { return default(System.Guid); } }
         public string Name { get { return default(string); } }
         public System.Diagnostics.Tracing.EventSourceSettings Settings { get { return default(System.Diagnostics.Tracing.EventSourceSettings); } }
+        public event EventHandler<EventCommandEventArgs> EventCommandExecuted { add {} remove {} }
         public void Dispose() { }
         protected virtual void Dispose(bool disposing) { }
         ~EventSource() { }

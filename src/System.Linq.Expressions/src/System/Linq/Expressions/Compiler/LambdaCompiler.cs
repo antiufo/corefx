@@ -1,5 +1,6 @@
-// Copyright (c) Microsoft. All rights reserved.
-// Licensed under the MIT license. See LICENSE file in the project root for full license information.
+// Licensed to the .NET Foundation under one or more agreements.
+// The .NET Foundation licenses this file to you under the MIT license.
+// See the LICENSE file in the project root for more information.
 
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
@@ -84,13 +85,15 @@ namespace System.Linq.Expressions.Compiler
         }
 
         /// <summary>
-        /// Creates a lambda compiler that will compile into the provided Methodbuilder
+        /// Creates a lambda compiler that will compile into the provided MethodBuilder
         /// </summary>
         private LambdaCompiler(AnalyzedTree tree, LambdaExpression lambda, MethodBuilder method)
         {
-            _hasClosureArgument = tree.Scopes[lambda].NeedsClosure;
+            var scope = tree.Scopes[lambda];
+            var hasClosureArgument = scope.NeedsClosure;
+
             Type[] paramTypes = GetParameterTypes(lambda);
-            if (_hasClosureArgument)
+            if (hasClosureArgument)
             {
                 paramTypes = paramTypes.AddFirst(typeof(Closure));
             }
@@ -99,7 +102,7 @@ namespace System.Linq.Expressions.Compiler
             method.SetParameters(paramTypes);
             var paramNames = lambda.Parameters.Map(p => p.Name);
             // parameters are index from 1, with closure argument we need to skip the first arg
-            int startIndex = _hasClosureArgument ? 2 : 1;
+            int startIndex = hasClosureArgument ? 2 : 1;
             for (int i = 0; i < paramNames.Length; i++)
             {
                 method.DefineParameter(i + startIndex, ParameterAttributes.None, paramNames[i]);
@@ -109,11 +112,12 @@ namespace System.Linq.Expressions.Compiler
             _lambda = lambda;
             _typeBuilder = (TypeBuilder)method.DeclaringType.GetTypeInfo();
             _method = method;
+            _hasClosureArgument = hasClosureArgument;
 
             _ilg = method.GetILGenerator();
 
             // These are populated by AnalyzeTree/VariableBinder
-            _scope = tree.Scopes[lambda];
+            _scope = scope;
             _boundConstants = tree.Constants[lambda];
 
             InitializeMethod();
@@ -122,7 +126,10 @@ namespace System.Linq.Expressions.Compiler
         /// <summary>
         /// Creates a lambda compiler for an inlined lambda
         /// </summary>
-        private LambdaCompiler(LambdaCompiler parent, LambdaExpression lambda)
+        private LambdaCompiler(
+            LambdaCompiler parent,
+            LambdaExpression lambda,
+            InvocationExpression invocation)
         {
             _tree = parent._tree;
             _lambda = lambda;
@@ -130,7 +137,8 @@ namespace System.Linq.Expressions.Compiler
             _ilg = parent._ilg;
             _hasClosureArgument = parent._hasClosureArgument;
             _typeBuilder = parent._typeBuilder;
-            _scope = _tree.Scopes[lambda];
+            // inlined scopes are associated with invocation, not with the lambda
+            _scope = _tree.Scopes[invocation];
             _boundConstants = parent._boundConstants;
         }
 
@@ -167,7 +175,6 @@ namespace System.Linq.Expressions.Compiler
         /// Compiler entry point
         /// </summary>
         /// <param name="lambda">LambdaExpression to compile.</param>
-        /// <param name="debugInfoGenerator">Debug info generator.</param>
         /// <returns>The compiled delegate.</returns>
         internal static Delegate Compile(LambdaExpression lambda)
         {
@@ -269,7 +276,7 @@ namespace System.Linq.Expressions.Compiler
         }
 
         /// <summary>
-        /// Creates an unitialized field suitable for private implementation details
+        /// Creates an uninitialized field suitable for private implementation details
         /// Works with DynamicMethods or TypeBuilders.
         /// </summary>
         private MemberExpression CreateLazyInitializedField<T>(string name)

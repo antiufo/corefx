@@ -1,13 +1,13 @@
-// Copyright (c) Microsoft. All rights reserved.
-// Licensed under the MIT license. See LICENSE file in the project root for full license information.
+// Licensed to the .NET Foundation under one or more agreements.
+// The .NET Foundation licenses this file to you under the MIT license.
+// See the LICENSE file in the project root for more information.
 
+using Microsoft.Win32.SafeHandles;
 using System.Diagnostics;
 using System.Diagnostics.Contracts;
 using System.Runtime.InteropServices;
 using System.Threading;
 using System.Threading.Tasks;
-
-using Microsoft.Win32.SafeHandles;
 
 namespace System.IO
 {
@@ -32,8 +32,31 @@ namespace System.IO
         /// <summary>If the file was opened with FileMode.Append, the length of the file when opened; otherwise, -1.</summary>
         private readonly long _appendStart = -1;
 
-        /// <summary>Whether asynchronous read/write/flush operations should be performed using async I/O.</summary>
+        /// <summary>
+        /// Whether asynchronous read/write/flush operations should be performed using async I/O.
+        /// On Windows FileOptions.Asynchronous controls how the file handle is configured, 
+        /// and then as a result how operations are issued against that file handle.  On Unix, 
+        /// there isn't any distinction around how file descriptors are created for async vs 
+        /// sync, but we still differentiate how the operations are issued in order to provide
+        /// similar behavioral semantics and performance characteristics as on Windows.  On
+        /// Windows, if non-async, async read/write requests just delegate to the base stream,
+        /// and no attempt is made to synchronize between sync and async operations on the stream;
+        /// if async, then async read/write requests are implemented specially, and sync read/write
+        /// requests are coordinated with async ones by implementing the sync ones over the async
+        /// ones.  On Unix, we do something similar.  If non-async, async read/write requests just
+        /// delegate to the base stream, and no attempt is made to synchronize.  If async, we use
+        /// a semaphore to coordinate both sync and async operations.
+        /// </summary>
         private readonly bool _useAsyncIO;
+
+        /// <summary>
+        /// Extra state used by the file stream when _useAsyncIO is true.  This includes
+        /// the semaphore used to serialize all operation, the buffer/offset/count provided by the
+        /// caller for ReadAsync/WriteAsync operations, and the last successful task returned
+        /// synchronously from ReadAsync which can be reused if the count matches the next request.
+        /// Only initialized when <see cref="_useAsyncIO"/> is true.
+        /// </summary>
+        private readonly AsyncState _asyncState;
 
         /// <summary>The length of the _buffer.</summary>
         private readonly int _bufferLength;
@@ -81,42 +104,66 @@ namespace System.IO
             _mode = mode;
             _options = options;
             _bufferLength = bufferSize;
-            _useAsyncIO = (options & FileOptions.Asynchronous) != 0;
+            if ((options & FileOptions.Asynchronous) != 0)
+            {
+                _useAsyncIO = true;
+                _asyncState = new AsyncState();
+            }
 
-            // Translate the arguments into arguments for an open call
+            // Translate the arguments into arguments for an open call.
             Interop.Sys.OpenFlags openFlags = PreOpenConfigurationFromOptions(mode, access, options); // FileShare currently ignored
-            Interop.Sys.Permissions openPermissions = Interop.Sys.Permissions.S_IRWXU; // creator has read/write/execute permissions; no permissions for anyone else
+
+            // If the file gets created a new, we'll select the permissions for it.  Most utilities by default use 666 (read and 
+            // write for all). However, on Windows it's possible to write out a file and then execute it.  To maintain that similarity, 
+            // we use 766, so that in addition the user has execute privileges. No matter what we choose, it'll be subject to the umask 
+            // applied by the system, such that the actual permissions will typically be less than what we select here.
+            const Interop.Sys.Permissions openPermissions =
+                Interop.Sys.Permissions.S_IRWXU |
+                Interop.Sys.Permissions.S_IRGRP | Interop.Sys.Permissions.S_IWGRP |
+                Interop.Sys.Permissions.S_IROTH | Interop.Sys.Permissions.S_IWOTH;
 
             // Open the file and store the safe handle. Subsequent code in this method expects the safe handle to be initialized.
             _fileHandle = SafeFileHandle.Open(path, openFlags, (int)openPermissions);
-            _fileHandle.IsAsync = _useAsyncIO;
-
-            // Lock the file if requested via FileShare.  This is only advisory locking. FileShare.None implies an exclusive 
-            // lock on the file and all other modes use a shared lock.  While this is not as granular as Windows, not mandatory, 
-            // and not atomic with file opening, it's better than nothing.
             try
             {
-                Interop.libc.LockOperations lockOperation = (share == FileShare.None) ? Interop.libc.LockOperations.LOCK_EX : Interop.libc.LockOperations.LOCK_SH;
-                SysCall<Interop.libc.LockOperations, int>((fd, op, _) => Interop.libc.flock(fd, op), lockOperation | Interop.libc.LockOperations.LOCK_NB);
+                _fileHandle.IsAsync = _useAsyncIO;
+
+                // Lock the file if requested via FileShare.  This is only advisory locking. FileShare.None implies an exclusive 
+                // lock on the file and all other modes use a shared lock.  While this is not as granular as Windows, not mandatory, 
+                // and not atomic with file opening, it's better than nothing.  Some kinds of files, e.g. FIFOs, don't support
+                // locking on some platforms, e.g. OSX, and so if flock returns ENOTSUP, we similarly treat it as a hint and ignore it,
+                // as we don't want to entirely prevent usage of a particular file simply because locking isn't supported.
+                Interop.Sys.LockOperations lockOperation = (share == FileShare.None) ? Interop.Sys.LockOperations.LOCK_EX : Interop.Sys.LockOperations.LOCK_SH;
+                CheckFileCall(Interop.Sys.FLock(_fileHandle, lockOperation | Interop.Sys.LockOperations.LOCK_NB), ignoreNotSupported: true);
+
+                // These provide hints around how the file will be accessed.  Specifying both RandomAccess
+                // and Sequential together doesn't make sense as they are two competing options on the same spectrum,
+                // so if both are specified, we prefer RandomAccess (behavior on Windows is unspecified if both are provided).
+                Interop.Sys.FileAdvice fadv =
+                    (_options & FileOptions.RandomAccess) != 0 ? Interop.Sys.FileAdvice.POSIX_FADV_RANDOM :
+                    (_options & FileOptions.SequentialScan) != 0 ? Interop.Sys.FileAdvice.POSIX_FADV_SEQUENTIAL :
+                    0;
+                if (fadv != 0)
+                {
+                    CheckFileCall(Interop.Sys.PosixFAdvise(_fileHandle, 0, 0, fadv), 
+                        ignoreNotSupported: true); // just a hint.
+                }
+
+                // Jump to the end of the file if opened as Append.
+                if (_mode == FileMode.Append)
+                {
+                    _appendStart = SeekCore(0, SeekOrigin.End);
+                }
             }
             catch
             {
+                // If anything goes wrong while setting up the stream, make sure we deterministically dispose
+                // of the opened handle.
                 _fileHandle.Dispose();
+                _fileHandle = null;
                 throw;
             }
-
-            // Perform additional configurations on the stream based on the provided FileOptions
-            PostOpenConfigureStreamFromOptions();
-
-            // Jump to the end of the file if opened as Append.
-            if (_mode == FileMode.Append)
-            {
-                _appendStart = SeekCore(0, SeekOrigin.End);
-            }
         }
-
-        /// <summary>Performs additional configuration of the opened stream based on provided options.</summary>
-        partial void PostOpenConfigureStreamFromOptions();
 
         /// <summary>Initializes a stream from an already open file handle (file descriptor).</summary>
         /// <param name="handle">The handle to the file.</param>
@@ -128,21 +175,25 @@ namespace System.IO
         {
             // Make sure the handle is open
             if (handle.IsInvalid)
-                throw new ArgumentException(SR.Arg_InvalidHandle, "handle");
+                throw new ArgumentException(SR.Arg_InvalidHandle, nameof(handle));
             if (handle.IsClosed)
                 throw new ObjectDisposedException(SR.ObjectDisposed_FileClosed);
             if (access < FileAccess.Read || access > FileAccess.ReadWrite)
-                throw new ArgumentOutOfRangeException("access", SR.ArgumentOutOfRange_Enum);
+                throw new ArgumentOutOfRangeException(nameof(access), SR.ArgumentOutOfRange_Enum);
             if (bufferSize <= 0)
-                throw new ArgumentOutOfRangeException("bufferSize", SR.ArgumentOutOfRange_NeedNonNegNum);
+                throw new ArgumentOutOfRangeException(nameof(bufferSize), SR.ArgumentOutOfRange_NeedNonNegNum);
             if (handle.IsAsync.HasValue && useAsyncIO != handle.IsAsync.Value)
-                throw new ArgumentException(SR.Arg_HandleNotAsync, "handle");
+                throw new ArgumentException(SR.Arg_HandleNotAsync, nameof(handle));
 
             _fileHandle = handle;
             _access = access;
             _exposedHandle = true;
             _bufferLength = bufferSize;
-            _useAsyncIO = useAsyncIO;
+            if (useAsyncIO)
+            {
+                _useAsyncIO = true;
+                _asyncState = new AsyncState();
+            }
 
             if (CanSeek)
             {
@@ -150,7 +201,10 @@ namespace System.IO
             }
         }
 
-        /// <summary>Gets the array used for buffering reading and writing.  If the array hasn't been allocated, this will lazily allocate it.</summary>
+        /// <summary>
+        /// Gets the array used for buffering reading and writing.  
+        /// If the array hasn't been allocated, this will lazily allocate it.
+        /// </summary>
         /// <returns>The buffer.</returns>
         private byte[] GetBuffer()
         {
@@ -208,18 +262,15 @@ namespace System.IO
             }
 
             // Translate some FileOptions; some just aren't supported, and others will be handled after calling open.
-            switch (options)
+            // - Asynchronous: Handled in ctor, setting _useAsync and SafeFileHandle.IsAsync to true
+            // - DeleteOnClose: Doesn't have a Unix equivalent, but we approximate it in Dispose
+            // - Encrypted: No equivalent on Unix and is ignored
+            // - RandomAccess: Implemented after open if posix_fadvise is available
+            // - SequentialScan: Implemented after open if posix_fadvise is available
+            // - WriteThrough: Handled here
+            if ((options & FileOptions.WriteThrough) != 0)
             {
-                case FileOptions.Asynchronous:    // Handled in ctor, setting _useAsync and SafeFileHandle.IsAsync to true
-                case FileOptions.DeleteOnClose:   // DeleteOnClose doesn't have a Unix equivalent, but we approximate it in Dispose
-                case FileOptions.Encrypted:       // Encrypted does not have an equivalent on Unix and is ignored.
-                case FileOptions.RandomAccess:    // Implemented after open if posix_fadvise is available
-                case FileOptions.SequentialScan:  // Implemented after open if posix_fadvise is available
-                    break;
-
-                case FileOptions.WriteThrough:
-                    flags |= Interop.Sys.OpenFlags.O_SYNC;
-                    break;
+                flags |= Interop.Sys.OpenFlags.O_SYNC;
             }
 
             return flags;
@@ -252,7 +303,7 @@ namespace System.IO
                 if (!_canSeek.HasValue)
                 {
                     // Lazily-initialize whether we're able to seek, tested by seeking to our current location.
-                    _canSeek = SysCall<int, int>((fd, _, __) => Interop.libc.lseek(fd, 0, Interop.libc.SeekWhence.SEEK_CUR), throwOnError: false) >= 0;
+                    _canSeek = Interop.Sys.LSeek(_fileHandle, 0, Interop.Sys.SeekWhence.SEEK_CUR) >= 0;
                 }
                 return _canSeek.Value;
             }
@@ -271,20 +322,17 @@ namespace System.IO
             {
                 if (_fileHandle.IsClosed)
                 {
-                    throw __Error.GetFileNotOpen();
+                    throw Error.GetFileNotOpen();
                 }
                 if (!_parent.CanSeek)
                 {
-                    throw __Error.GetSeekNotSupported();
+                    throw Error.GetSeekNotSupported();
                 }
 
                 // Get the length of the file as reported by the OS
-                long length = SysCall<int, int>((fd, _, __) =>
-                {
-                    Interop.Sys.FileStatus status;
-                    int result = Interop.Sys.FStat(fd, out status);
-                    return result >= 0 ? status.Size : result;
-                });
+                Interop.Sys.FileStatus status;
+                CheckFileCall(Interop.Sys.FStat(_fileHandle, out status));
+                long length = status.Size;
 
                 // But we may have buffered some data to be written that puts our length
                 // beyond what the OS is aware of.  Update accordingly.
@@ -318,11 +366,11 @@ namespace System.IO
             {
                 if (_fileHandle.IsClosed)
                 {
-                    throw __Error.GetFileNotOpen();
+                    throw Error.GetFileNotOpen();
                 }
                 if (!_parent.CanSeek)
                 {
-                    throw __Error.GetSeekNotSupported();
+                    throw Error.GetSeekNotSupported();
                 }
 
                 VerifyBufferInvariants();
@@ -341,7 +389,7 @@ namespace System.IO
             {
                 if (value < 0)
                 {
-                    throw new ArgumentOutOfRangeException("value", SR.ArgumentOutOfRange_NeedNonNegNum);
+                    throw new ArgumentOutOfRangeException(nameof(value), SR.ArgumentOutOfRange_NeedNonNegNum);
                 }
                 _parent.Seek(value, SeekOrigin.Begin);
             }
@@ -395,19 +443,21 @@ namespace System.IO
         /// <param name="disposing">true to release both managed and unmanaged resources; false to release only unmanaged resources.</param>
         protected override void Dispose(bool disposing)
         {
-            // Flush and close the file
             try
             {
                 if (_fileHandle != null && !_fileHandle.IsClosed)
                 {
+                    // Flush any remaining data in the file
                     FlushWriteBuffer();
 
-                    // Unix doesn't directly support DeleteOnClose but we can mimick it.
-                    if ((_options & FileOptions.DeleteOnClose) != 0)
+                    // If DeleteOnClose was requested when constructed, delete the file now.
+                    // (Unix doesn't directly support DeleteOnClose, so we mimic it here.)
+                    if (_path != null && (_options & FileOptions.DeleteOnClose) != 0)
                     {
                         // Since we still have the file open, this will end up deleting
-                        // it (assuming we're the only link to it) once it's closed.
-                        Interop.Sys.Unlink(_path); // ignore any error
+                        // it (assuming we're the only link to it) once it's closed, but the
+                        // name will be removed immediately.
+                        Interop.Sys.Unlink(_path); // ignore errors; it's valid that the path may no longer exist
                     }
                 }
             }
@@ -442,7 +492,7 @@ namespace System.IO
         {
             if (_fileHandle.IsClosed)
             {
-                throw __Error.GetFileNotOpen();
+                throw Error.GetFileNotOpen();
             }
 
             FlushInternalBuffer();
@@ -455,7 +505,21 @@ namespace System.IO
         /// <summary>Flushes the OS buffer.  This does not flush the internal read/write buffer.</summary>
         private void FlushOSBuffer()
         {
-            SysCall<int, int>((fd, _, __) => Interop.libc.fsync(fd));
+            if (Interop.Sys.FSync(_fileHandle) < 0)
+            {
+                Interop.ErrorInfo errorInfo = Interop.Sys.GetLastErrorInfo();
+                switch (errorInfo.Error)
+                {
+                    case Interop.Error.EROFS:
+                    case Interop.Error.EINVAL:
+                    case Interop.Error.ENOTSUP:
+                        // Ignore failures due to the FileStream being bound to a special file that
+                        // doesn't support synchronization.  In such cases there's nothing to flush.
+                        break;
+                    default:
+                        throw Interop.GetExceptionForIoErrno(errorInfo, _path, isDirectory: false);
+                }
+            }
         }
 
         /// <summary>
@@ -483,7 +547,7 @@ namespace System.IO
             VerifyBufferInvariants();
             if (_writePos > 0)
             {
-                WriteCore(GetBuffer(), 0, _writePos);
+                WriteNative(GetBuffer(), 0, _writePos);
                 _writePos = 0;
             }
         }
@@ -511,7 +575,7 @@ namespace System.IO
             }
             if (_fileHandle.IsClosed)
             {
-                throw __Error.GetFileNotOpen();
+                throw Error.GetFileNotOpen();
             }
 
             // As with Win32FileStream, flush the buffers synchronously to avoid race conditions.
@@ -547,19 +611,19 @@ namespace System.IO
         {
             if (value < 0)
             {
-                throw new ArgumentOutOfRangeException("value", SR.ArgumentOutOfRange_NeedNonNegNum);
+                throw new ArgumentOutOfRangeException(nameof(value), SR.ArgumentOutOfRange_NeedNonNegNum);
             }
             if (_fileHandle.IsClosed)
             {
-                throw __Error.GetFileNotOpen();
+                throw Error.GetFileNotOpen();
             }
             if (!_parent.CanSeek)
             {
-                throw __Error.GetSeekNotSupported();
+                throw Error.GetSeekNotSupported();
             }
             if (!_parent.CanWrite)
             {
-                throw __Error.GetWriteNotSupported();
+                throw Error.GetWriteNotSupported();
             }
 
             FlushInternalBuffer();
@@ -578,7 +642,7 @@ namespace System.IO
                 SeekCore(value, SeekOrigin.Begin);
             }
 
-            SysCall<long, int>((fd, length, _) => Interop.libc.ftruncate(fd, length), value);
+            CheckFileCall(Interop.Sys.FTruncate(_fileHandle, value));
 
             // Return file pointer to where it was before setting length
             if (origPos != value)
@@ -609,6 +673,31 @@ namespace System.IO
         {
             ValidateReadWriteArgs(array, offset, count);
 
+            if (_useAsyncIO)
+            {
+                _asyncState.Wait();
+                try { return ReadCore(array, offset, count); }
+                finally { _asyncState.Release(); }
+            }
+            else
+            {
+                return ReadCore(array, offset, count);
+            }
+        }
+
+        /// <summary>Reads a block of bytes from the stream and writes the data in a given buffer.</summary>
+        /// <param name="array">
+        /// When this method returns, contains the specified byte array with the values between offset and 
+        /// (offset + count - 1) replaced by the bytes read from the current source.
+        /// </param>
+        /// <param name="offset">The byte offset in array at which the read bytes will be placed.</param>
+        /// <param name="count">The maximum number of bytes to read. </param>
+        /// <returns>
+        /// The total number of bytes read into the buffer. This might be less than the number of bytes requested 
+        /// if that number of bytes are not currently available, or zero if the end of the stream is reached.
+        /// </returns>
+        private int ReadCore(byte[] array, int offset, int count)
+        {
             PrepareForReading();
 
             // Are there any bytes available in the read buffer? If yes,
@@ -618,6 +707,7 @@ namespace System.IO
             // we can just go directly into the user's buffer, if they asked
             // for more data than we'd otherwise buffer.
             int numBytesAvailable = _readLength - _readPos;
+            bool readFromOS = false;
             if (numBytesAvailable == 0)
             {
                 // If we're not able to seek, then we're not able to rewind the stream (i.e. flushing
@@ -626,29 +716,48 @@ namespace System.IO
                 if (!_parent.CanSeek || (count >= _bufferLength))
                 {
                     // Read directly into the user's buffer
-                    int bytesRead = ReadCore(array, offset, count);
-                    _readPos = _readLength = 0; // reset after the read just in case read experiences an exception
-                    return bytesRead;
+                    _readPos = _readLength = 0;
+                    return ReadNative(array, offset, count);
                 }
                 else
                 {
                     // Read into our buffer.
-                    _readLength = numBytesAvailable = ReadCore(GetBuffer(), 0, _bufferLength);
+                    _readLength = numBytesAvailable = ReadNative(GetBuffer(), 0, _bufferLength);
                     _readPos = 0;
                     if (numBytesAvailable == 0)
                     {
                         return 0;
                     }
+
+                    // Note that we did an OS read as part of this Read, so that later
+                    // we don't try to do one again if what's in the buffer doesn't
+                    // meet the user's request.
+                    readFromOS = true;
                 }
             }
 
-            // Now that we know there's data in the buffer, read from it into
-            // the user's buffer.
-            int bytesToRead = Math.Min(numBytesAvailable, count);
-            Buffer.BlockCopy(GetBuffer(), _readPos, array, offset, bytesToRead);
-            _readPos += bytesToRead;
+            // Now that we know there's data in the buffer, read from it into the user's buffer.
+            Debug.Assert(numBytesAvailable > 0, "Data must be in the buffer to be here");
+            int bytesRead = Math.Min(numBytesAvailable, count);
+            Buffer.BlockCopy(GetBuffer(), _readPos, array, offset, bytesRead);
+            _readPos += bytesRead;
 
-            return bytesToRead;
+            // We may not have had enough data in the buffer to completely satisfy the user's request.
+            // While Read doesn't require that we return as much data as the user requested (any amount
+            // up to the requested count is fine), FileStream on Windows tries to do so by doing a 
+            // subsequent read from the file if we tried to satisfy the request with what was in the 
+            // buffer but the buffer contained less than the requested count. To be consistent with that 
+            // behavior, we do the same thing here on Unix.  Note that we may still get less the requested 
+            // amount, as the OS may give us back fewer than we request, either due to reaching the end of 
+            // file, or due to its own whims.
+            if (!readFromOS && bytesRead < count)
+            {
+                Debug.Assert(_readPos == _readLength, "bytesToRead should only be < count if numBytesAvailable < count");
+                _readPos = _readLength = 0; // no data left in the read buffer
+                bytesRead += ReadNative(array, offset + bytesRead, count - bytesRead);
+            }
+
+            return bytesRead;
         }
 
         /// <summary>Unbuffered, reads a block of bytes from the stream and writes the data in a given buffer.</summary>
@@ -662,7 +771,7 @@ namespace System.IO
         /// The total number of bytes read into the buffer. This might be less than the number of bytes requested 
         /// if that number of bytes are not currently available, or zero if the end of the stream is reached.
         /// </returns>
-        private unsafe int ReadCore(byte[] array, int offset, int count)
+        private unsafe int ReadNative(byte[] array, int offset, int count)
         {
             FlushWriteBuffer(); // we're about to read; dump the write buffer
 
@@ -671,12 +780,8 @@ namespace System.IO
             int bytesRead;
             fixed (byte* bufPtr = array)
             {
-                bytesRead = (int)SysCall((fd, ptr, len) =>
-                {
-                    long result = (long)Interop.libc.read(fd, (byte*)ptr, (IntPtr)len);
-                    Debug.Assert(result <= len);
-                    return result;
-                }, (IntPtr)(bufPtr + offset), count);
+                bytesRead = CheckFileCall(Interop.Sys.Read(_fileHandle, bufPtr + offset, count));
+                Debug.Assert(bytesRead <= count);
             }
             _filePosition += bytesRead;
             return bytesRead;
@@ -697,13 +802,79 @@ namespace System.IO
                 return Task.FromCanceled<int>(cancellationToken);
 
             if (_fileHandle.IsClosed)
-                throw __Error.GetFileNotOpen();
+                throw Error.GetFileNotOpen();
 
             if (_useAsyncIO)
             {
-                // TODO: Use async I/O instead of sync I/O
+                if (!_parent.CanRead) // match Windows behavior; this gets thrown synchronously
+                {
+                    throw Error.GetReadNotSupported();
+                }
+
+                // Serialize operations using the semaphore.
+                Task waitTask = _asyncState.WaitAsync();
+
+                // If we got ownership immediately, and if there's enough data in our buffer
+                // to satisfy the full request of the caller, hand back the buffered data.
+                // While it would be a legal implementation of the Read contract, we don't
+                // hand back here less than the amount requested so as to match the behavior
+                // in ReadCore that will make a native call to try to fulfill the remainder
+                // of the request.
+                if (waitTask.Status == TaskStatus.RanToCompletion)
+                {
+                    int numBytesAvailable = _readLength - _readPos;
+                    if (numBytesAvailable >= count)
+                    {
+                        try
+                        {
+                            PrepareForReading();
+
+                            Buffer.BlockCopy(GetBuffer(), _readPos, buffer, offset, count);
+                            _readPos += count;
+
+                            return _asyncState._lastSuccessfulReadTask != null && _asyncState._lastSuccessfulReadTask.Result == count ?
+                                _asyncState._lastSuccessfulReadTask :
+                                (_asyncState._lastSuccessfulReadTask = Task.FromResult(count));
+                        }
+                        catch (Exception exc)
+                        {
+                            return Task.FromException<int>(exc);
+                        }
+                        finally
+                        {
+                            _asyncState.Release();
+                        }
+                    }
+                }
+
+                // Otherwise, issue the whole request asynchronously.
+                _asyncState.Update(buffer, offset, count);
+                return waitTask.ContinueWith((t, s) =>
+                {
+                    // The options available on Unix for writing asynchronously to an arbitrary file 
+                    // handle typically amount to just using another thread to do the synchronous write, 
+                    // which is exactly  what this implementation does. This does mean there are subtle
+                    // differences in certain FileStream behaviors between Windows and Unix when multiple 
+                    // asynchronous operations are issued against the stream to execute concurrently; on 
+                    // Unix the operations will be serialized due to the usage of a semaphore, but the 
+                    // position /length information won't be updated until after the write has completed, 
+                    // whereas on Windows it may happen before the write has completed.
+
+                    Debug.Assert(t.Status == TaskStatus.RanToCompletion);
+                    var thisRef = (UnixFileStream)s;
+                    try
+                    {
+                        byte[] b = thisRef._asyncState._buffer;
+                        thisRef._asyncState._buffer = null; // remove reference to user's buffer
+                        return thisRef.ReadCore(b, thisRef._asyncState._offset, thisRef._asyncState._count);
+                    }
+                    finally { thisRef._asyncState.Release(); }
+                }, this, CancellationToken.None, TaskContinuationOptions.DenyChildAttach, TaskScheduler.Default);
             }
-            return base.ReadAsync(buffer, offset, count, cancellationToken);
+            else
+            {
+                return base.ReadAsync(buffer, offset, count, cancellationToken);
+            }
         }
 
         /// <summary>
@@ -713,12 +884,26 @@ namespace System.IO
         /// <returns>The unsigned byte cast to an Int32, or -1 if at the end of the stream.</returns>
         public override int ReadByte()
         {
+            if (_useAsyncIO)
+            {
+                _asyncState.Wait();
+                try { return ReadByteCore(); }
+                finally { _asyncState.Release(); }
+            }
+            else
+            {
+                return ReadByteCore();
+            }
+        }
+
+        private int ReadByteCore()
+        {
             PrepareForReading();
 
             byte[] buffer = GetBuffer();
             if (_readPos == _readLength)
             {
-                _readLength = ReadCore(buffer, 0, _bufferLength);
+                _readLength = ReadNative(buffer, 0, _bufferLength);
                 _readPos = 0;
                 if (_readLength == 0)
                 {
@@ -734,11 +919,11 @@ namespace System.IO
         {
             if (_fileHandle.IsClosed)
             {
-                throw __Error.GetFileNotOpen();
+                throw Error.GetFileNotOpen();
             }
             if (_readLength == 0 && !_parent.CanRead)
             {
-                throw __Error.GetReadNotSupported();
+                throw Error.GetReadNotSupported();
             }
             VerifyBufferInvariants();
         }
@@ -751,6 +936,24 @@ namespace System.IO
         {
             ValidateReadWriteArgs(array, offset, count);
 
+            if (_useAsyncIO)
+            {
+                _asyncState.Wait();
+                try { WriteCore(array, offset, count); }
+                finally { _asyncState.Release(); }
+            }
+            else
+            {
+                WriteCore(array, offset, count);
+            }
+        }
+
+        /// <summary>Writes a block of bytes to the file stream.</summary>
+        /// <param name="array">The buffer containing data to write to the stream.</param>
+        /// <param name="offset">The zero-based byte offset in array from which to begin copying bytes to the stream.</param>
+        /// <param name="count">The maximum number of bytes to write.</param>
+        private void WriteCore(byte[] array, int offset, int count)
+        {
             PrepareForWriting();
 
             // If no data is being written, nothing more to do.
@@ -793,7 +996,7 @@ namespace System.IO
             Debug.Assert(_writePos == 0);
             if (count >= _bufferLength)
             {
-                WriteCore(array, offset, count);
+                WriteNative(array, offset, count);
             }
             else
             {
@@ -806,7 +1009,7 @@ namespace System.IO
         /// <param name="array">The buffer containing data to write to the stream.</param>
         /// <param name="offset">The zero-based byte offset in array from which to begin copying bytes to the stream.</param>
         /// <param name="count">The maximum number of bytes to write.</param>
-        private unsafe void WriteCore(byte[] array, int offset, int count)
+        private unsafe void WriteNative(byte[] array, int offset, int count)
         {
             VerifyOSHandlePosition();
 
@@ -814,12 +1017,9 @@ namespace System.IO
             {
                 while (count > 0)
                 {
-                    int bytesWritten = (int)SysCall((fd, ptr, len) =>
-                    {
-                        long result = (long)Interop.libc.write(fd, (byte*)ptr, (IntPtr)len);
-                        Debug.Assert(result <= len);
-                        return result;
-                    }, (IntPtr)(bufPtr + offset), count);
+                    int bytesWritten = CheckFileCall(Interop.Sys.Write(_fileHandle, bufPtr + offset, count));
+                    Debug.Assert(bytesWritten <= count);
+
                     _filePosition += bytesWritten;
                     count -= bytesWritten;
                     offset += bytesWritten;
@@ -843,13 +1043,73 @@ namespace System.IO
                 return Task.FromCanceled(cancellationToken);
 
             if (_fileHandle.IsClosed)
-                throw __Error.GetFileNotOpen();
+                throw Error.GetFileNotOpen();
 
             if (_useAsyncIO)
             {
-                // TODO: Use async I/O instead of sync I/O
+                if (!_parent.CanWrite) // match Windows behavior; this gets thrown synchronously
+                {
+                    throw Error.GetWriteNotSupported();
+                }
+
+                // Serialize operations using the semaphore.
+                Task waitTask = _asyncState.WaitAsync();
+
+                // If we got ownership immediately, and if there's enough space in our buffer
+                // to buffer the entire write request, then do so and we're done.
+                if (waitTask.Status == TaskStatus.RanToCompletion)
+                {
+                    int spaceRemaining = _bufferLength - _writePos;
+                    if (spaceRemaining >= count)
+                    {
+                        try
+                        {
+                            PrepareForWriting();
+
+                            Buffer.BlockCopy(buffer, offset, GetBuffer(), _writePos, count);
+                            _writePos += count;
+
+                            return Task.CompletedTask;
+                        }
+                        catch (Exception exc)
+                        {
+                            return Task.FromException(exc);
+                        }
+                        finally
+                        {
+                            _asyncState.Release();
+                        }
+                    }
+                }
+
+                // Otherwise, issue the whole request asynchronously.
+                _asyncState.Update(buffer, offset, count);
+                return waitTask.ContinueWith((t, s) =>
+                {
+                    // The options available on Unix for writing asynchronously to an arbitrary file 
+                    // handle typically amount to just using another thread to do the synchronous write, 
+                    // which is exactly  what this implementation does. This does mean there are subtle
+                    // differences in certain FileStream behaviors between Windows and Unix when multiple 
+                    // asynchronous operations are issued against the stream to execute concurrently; on 
+                    // Unix the operations will be serialized due to the usage of a semaphore, but the 
+                    // position /length information won't be updated until after the write has completed, 
+                    // whereas on Windows it may happen before the write has completed.
+
+                    Debug.Assert(t.Status == TaskStatus.RanToCompletion);
+                    var thisRef = (UnixFileStream)s;
+                    try
+                    {
+                        byte[] b = thisRef._asyncState._buffer;
+                        thisRef._asyncState._buffer = null; // remove reference to user's buffer
+                        thisRef.WriteCore(b, thisRef._asyncState._offset, thisRef._asyncState._count);
+                    }
+                    finally { thisRef._asyncState.Release(); }
+                }, this, CancellationToken.None, TaskContinuationOptions.DenyChildAttach, TaskScheduler.Default);
             }
-            return base.WriteAsync(buffer, offset, count, cancellationToken);
+            else
+            {
+                return base.WriteAsync(buffer, offset, count, cancellationToken);
+            }
         }
 
         /// <summary>
@@ -858,6 +1118,20 @@ namespace System.IO
         /// </summary>
         /// <param name="value">The byte to write to the stream.</param>
         public override void WriteByte(byte value) // avoids an array allocation in the base implementation
+        {
+            if (_useAsyncIO)
+            {
+                _asyncState.Wait();
+                try { WriteByteCore(value); }
+                finally { _asyncState.Release(); }
+            }
+            else
+            {
+                WriteByteCore(value);
+            }
+        }
+
+        private void WriteByteCore(byte value)
         {
             PrepareForWriting();
 
@@ -879,7 +1153,7 @@ namespace System.IO
         {
             if (_fileHandle.IsClosed)
             {
-                throw __Error.GetFileNotOpen();
+                throw Error.GetFileNotOpen();
             }
 
             // Make sure we're good to write.  We only need to do this if there's nothing already
@@ -887,7 +1161,7 @@ namespace System.IO
             // this checking and flushing.
             if (_writePos == 0)
             {
-                if (!_parent.CanWrite) throw __Error.GetWriteNotSupported();
+                if (!_parent.CanWrite) throw Error.GetWriteNotSupported();
                 FlushReadBuffer();
             }
         }
@@ -900,15 +1174,15 @@ namespace System.IO
         {
             if (array == null)
             {
-                throw new ArgumentNullException("array", SR.ArgumentNull_Buffer);
+                throw new ArgumentNullException(nameof(array), SR.ArgumentNull_Buffer);
             }
             if (offset < 0)
             {
-                throw new ArgumentOutOfRangeException("offset", SR.ArgumentOutOfRange_NeedNonNegNum);
+                throw new ArgumentOutOfRangeException(nameof(offset), SR.ArgumentOutOfRange_NeedNonNegNum);
             }
             if (count < 0)
             {
-                throw new ArgumentOutOfRangeException("count", SR.ArgumentOutOfRange_NeedNonNegNum);
+                throw new ArgumentOutOfRangeException(nameof(count), SR.ArgumentOutOfRange_NeedNonNegNum);
             }
             if (array.Length - offset < count)
             {
@@ -916,7 +1190,7 @@ namespace System.IO
             }
             if (_fileHandle.IsClosed)
             {
-                throw __Error.GetFileNotOpen();
+                throw Error.GetFileNotOpen();
             }
         }
 
@@ -931,15 +1205,15 @@ namespace System.IO
         {
             if (origin < SeekOrigin.Begin || origin > SeekOrigin.End)
             {
-                throw new ArgumentException(SR.Argument_InvalidSeekOrigin, "origin");
+                throw new ArgumentException(SR.Argument_InvalidSeekOrigin, nameof(origin));
             }
             if (_fileHandle.IsClosed)
             {
-                throw __Error.GetFileNotOpen();
+                throw Error.GetFileNotOpen();
             }
             if (!_parent.CanSeek)
             {
-                throw __Error.GetSeekNotSupported();
+                throw Error.GetSeekNotSupported();
             }
 
             VerifyOSHandlePosition();
@@ -989,77 +1263,53 @@ namespace System.IO
             Debug.Assert(!_fileHandle.IsClosed && CanSeek);
             Debug.Assert(origin >= SeekOrigin.Begin && origin <= SeekOrigin.End);
 
-            long pos = SysCall((fd, off, or) => Interop.libc.lseek(fd, off, or), offset, (Interop.libc.SeekWhence)(int)origin); // SeekOrigin values are the same as Interop.libc.SeekWhence values
+            long pos = CheckFileCall(Interop.Sys.LSeek(_fileHandle, offset, (Interop.Sys.SeekWhence)(int)origin)); // SeekOrigin values are the same as Interop.libc.SeekWhence values
             _filePosition = pos;
             return pos;
         }
 
-        /// <summary>
-        /// Helper for making system calls that involve the stream's file descriptor.
-        /// System calls are expected to return greather than or equal to zero on success,
-        /// and less than zero on failure.  In the case of failure, errno is expected to
-        /// be set to the relevant error code.
-        /// </summary>
-        /// <typeparam name="TArg1">Specifies the type of an argument to the system call.</typeparam>
-        /// <typeparam name="TArg2">Specifies the type of another argument to the system call.</typeparam>
-        /// <param name="sysCall">A delegate that invokes the system call.</param>
-        /// <param name="arg1">The first argument to be passed to the system call, after the file descriptor.</param>
-        /// <param name="arg2">The second argument to be passed to the system call.</param>
-        /// <param name="throwOnError">true to throw an exception if a non-interuption error occurs; otherwise, false.</param>
-        /// <returns>The return value of the system call.</returns>
-        /// <remarks>
-        /// Arguments are expected to be passed via <paramref name="arg1"/> and <paramref name="arg2"/>
-        /// so as to avoid delegate and closure allocations at the call sites.
-        /// </remarks>
-        private long SysCall<TArg1, TArg2>(
-            Func<int, TArg1, TArg2, long> sysCall,
-            TArg1 arg1 = default(TArg1), TArg2 arg2 = default(TArg2),
-            bool throwOnError = true)
+        private long CheckFileCall(long result, bool ignoreNotSupported = false)
         {
-            SafeFileHandle handle = _fileHandle;
-
-            Debug.Assert(sysCall != null);
-            Debug.Assert(handle != null);
-
-            bool gotRefOnHandle = false;
-            try
+            if (result < 0)
             {
-                // Get the file descriptor from the handle.  We increment the ref count to help
-                // ensure it's not closed out from under us.
-                handle.DangerousAddRef(ref gotRefOnHandle);
-                Debug.Assert(gotRefOnHandle);
-                int fd = (int)handle.DangerousGetHandle();
-                Debug.Assert(fd >= 0);
-
-                // System calls may fail due to EINTR (signal interruption).  We need to retry in those cases.
-                while (true)
+                Interop.ErrorInfo errorInfo = Interop.Sys.GetLastErrorInfo();
+                if (!(ignoreNotSupported && errorInfo.Error == Interop.Error.ENOTSUP))
                 {
-                    long result = sysCall(fd, arg1, arg2);
-                    if (result < 0)
-                    {
-                        Interop.ErrorInfo errorInfo = Interop.Sys.GetLastErrorInfo();
-                        if (errorInfo.Error == Interop.Error.EINTR)
-                        {
-                            continue;
-                        }
-                        else if (throwOnError)
-                        {
-                            throw Interop.GetExceptionForIoErrno(errorInfo, _path, isDirectory: false);
-                        }
-                    }
-                    return result;
+                    throw Interop.GetExceptionForIoErrno(errorInfo, _path, isDirectory: false);
                 }
             }
-            finally
+
+            return result;
+        }
+
+        private int CheckFileCall(int result, bool ignoreNotSupported = false)
+        {
+            CheckFileCall((long)result, ignoreNotSupported);
+
+            return result;
+        }
+
+        /// <summary>State used when the stream is in async mode.</summary>
+        private sealed class AsyncState : SemaphoreSlim
+        {
+            /// <summary>The caller's buffer currently being used by the active async operation.</summary>
+            internal byte[] _buffer;
+            /// <summary>The caller's offset currently being used by the active async operation.</summary>
+            internal int _offset;
+            /// <summary>The caller's count currently being used by the active async operation.</summary>
+            internal int _count;
+            /// <summary>The last task successfully, synchronously returned task from ReadAsync.</summary>
+            internal Task<int> _lastSuccessfulReadTask;
+
+            /// <summary>Initialize the AsyncState.</summary>
+            internal AsyncState() : base(initialCount: 1, maxCount: 1) { }
+
+            /// <summary>Sets the active buffer, offset, and count.</summary>
+            internal void Update(byte[] buffer, int offset, int count)
             {
-                if (gotRefOnHandle)
-                {
-                    handle.DangerousRelease();
-                }
-                else
-                {
-                    throw new ObjectDisposedException(SR.ObjectDisposed_FileClosed);
-                }
+                _buffer = buffer;
+                _offset = offset;
+                _count = count;
             }
         }
     }

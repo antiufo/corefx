@@ -1,21 +1,17 @@
-﻿// Copyright (c) Microsoft. All rights reserved.
-// Licensed under the MIT license. See LICENSE file in the project root for full license information.
+// Licensed to the .NET Foundation under one or more agreements.
+// The .NET Foundation licenses this file to you under the MIT license.
+// See the LICENSE file in the project root for more information.
 
-using System;
-using System.Xml;
-using System.IO;
+using OLEDB.Test.ModuleCore;
 using System.Collections;
 using System.Collections.Generic;
-using System.Reflection;
-using System.Diagnostics;
 using System.Globalization;
-using RWFactory;
-using OLEDB.Test.ModuleCore;
-using XmlCoreTest.Common;
+using System.IO;
 using System.Linq;
 using System.Xml.Linq;
+using XmlCoreTest.Common;
 
-namespace Webdata.Test.XmlDriver
+namespace System.Xml.Tests
 {
     /// <summary>
     /// CXmlDriverEngine
@@ -97,7 +93,7 @@ namespace Webdata.Test.XmlDriver
             {
                 _parseError = null;
 
-                // get controll file
+                // get control file
                 string cmdSpecFile = null;
                 if (CModCmdLine.CmdLine.ContainsKey(CMD_SPEC_LTM_KEY))
                     cmdSpecFile = (string)CModCmdLine.CmdLine[CMD_SPEC_LTM_KEY];
@@ -422,7 +418,7 @@ namespace Webdata.Test.XmlDriver
 
         private static XElement MergeSections(XElement parent, XElement child)
         {
-            // check inheritace rules
+            // check inheritance rules
             XAttribute attr = child.Attribute("Inheritance");
             string Inheritance = "";
             if (attr != null)

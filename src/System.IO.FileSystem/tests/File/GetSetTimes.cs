@@ -1,25 +1,30 @@
-﻿// Copyright (c) Microsoft. All rights reserved.
-// Licensed under the MIT license. See LICENSE file in the project root for full license information.
+// Licensed to the .NET Foundation under one or more agreements.
+// The .NET Foundation licenses this file to you under the MIT license.
+// See the LICENSE file in the project root for more information.
 
 using System.Collections.Generic;
 using System.Threading.Tasks;
 using Xunit;
 
-namespace System.IO.FileSystem.Tests
+namespace System.IO.Tests
 {
     public class File_GetSetTimes : FileSystemTest
     {
         public delegate void SetTime(string path, DateTime time);
         public delegate DateTime GetTime(string path);
 
-        public IEnumerable<Tuple<SetTime, GetTime, DateTimeKind>> TimeFunctions()
+        public IEnumerable<Tuple<SetTime, GetTime, DateTimeKind>> TimeFunctions(bool requiresRoundtripping = false)
         {
-            if (IOInputs.SupportsCreationTime)
+            if (IOInputs.SupportsGettingCreationTime && (!requiresRoundtripping || IOInputs.SupportsSettingCreationTime))
             {
                 yield return Tuple.Create<SetTime, GetTime, DateTimeKind>(
                     ((path, time) => File.SetCreationTime(path, time)),
                     ((path) => File.GetCreationTime(path)),
                     DateTimeKind.Local);
+                yield return Tuple.Create<SetTime, GetTime, DateTimeKind>(
+                    ((path, time) => File.SetCreationTimeUtc(path, time)),
+                    ((path) => File.GetCreationTimeUtc(path)),
+                    DateTimeKind.Unspecified);
                 yield return Tuple.Create<SetTime, GetTime, DateTimeKind>(
                     ((path, time) => File.SetCreationTimeUtc(path, time)),
                     ((path) => File.GetCreationTimeUtc(path)),
@@ -32,11 +37,19 @@ namespace System.IO.FileSystem.Tests
             yield return Tuple.Create<SetTime, GetTime, DateTimeKind>(
                 ((path, time) => File.SetLastAccessTimeUtc(path, time)),
                 ((path) => File.GetLastAccessTimeUtc(path)),
+                DateTimeKind.Unspecified);
+            yield return Tuple.Create<SetTime, GetTime, DateTimeKind>(
+                ((path, time) => File.SetLastAccessTimeUtc(path, time)),
+                ((path) => File.GetLastAccessTimeUtc(path)),
                 DateTimeKind.Utc);
             yield return Tuple.Create<SetTime, GetTime, DateTimeKind>(
                 ((path, time) => File.SetLastWriteTime(path, time)),
                 ((path) => File.GetLastWriteTime(path)),
                 DateTimeKind.Local);
+            yield return Tuple.Create<SetTime, GetTime, DateTimeKind>(
+                ((path, time) => File.SetLastWriteTimeUtc(path, time)),
+                ((path) => File.GetLastWriteTimeUtc(path)),
+                DateTimeKind.Unspecified);
             yield return Tuple.Create<SetTime, GetTime, DateTimeKind>(
                 ((path, time) => File.SetLastWriteTimeUtc(path, time)),
                 ((path) => File.GetLastWriteTimeUtc(path)),
@@ -69,14 +82,24 @@ namespace System.IO.FileSystem.Tests
             FileInfo testFile = new FileInfo(GetTestFilePath());
             testFile.Create().Dispose();
 
-            Assert.All(TimeFunctions(), (tuple) =>
+            Assert.All(TimeFunctions(requiresRoundtripping: true), (tuple) =>
             {
                 DateTime dt = new DateTime(2014, 12, 1, 12, 0, 0, tuple.Item3);
                 tuple.Item1(testFile.FullName, dt);
                 var result = tuple.Item2(testFile.FullName);
                 Assert.Equal(dt, result);
                 Assert.Equal(dt.ToLocalTime(), result.ToLocalTime());
-                Assert.Equal(dt.ToUniversalTime(), result.ToUniversalTime());
+
+                // File and Directory UTC APIs treat a DateTimeKind.Unspecified as UTC whereas
+                // ToUniversalTime treats it as local.
+                if (tuple.Item3 == DateTimeKind.Unspecified)
+                {
+                    Assert.Equal(dt, result.ToUniversalTime());
+                }
+                else
+                {
+                    Assert.Equal(dt.ToUniversalTime(), result.ToUniversalTime());
+                }
             });
         }
 
@@ -108,7 +131,7 @@ namespace System.IO.FileSystem.Tests
             Assert.Equal(DateTime.FromFileTime(0).Ticks, new FileInfo(path).LastAccessTime.Ticks);
             Assert.Equal(DateTime.FromFileTime(0).Ticks, File.GetLastWriteTime(path).Ticks);
             Assert.Equal(DateTime.FromFileTime(0).Ticks, new FileInfo(path).LastWriteTime.Ticks);
-            if (IOInputs.SupportsCreationTime)
+            if (IOInputs.SupportsGettingCreationTime)
             {
                 Assert.Equal(DateTime.FromFileTime(0).Ticks, File.GetCreationTime(path).Ticks);
                 Assert.Equal(DateTime.FromFileTime(0).Ticks, new FileInfo(path).CreationTime.Ticks);
@@ -119,7 +142,7 @@ namespace System.IO.FileSystem.Tests
             Assert.Equal(DateTime.FromFileTimeUtc(0).Ticks, new FileInfo(path).LastAccessTimeUtc.Ticks);
             Assert.Equal(DateTime.FromFileTimeUtc(0).Ticks, File.GetLastWriteTimeUtc(path).Ticks);
             Assert.Equal(DateTime.FromFileTimeUtc(0).Ticks, new FileInfo(path).LastWriteTimeUtc.Ticks);
-            if (IOInputs.SupportsCreationTime)
+            if (IOInputs.SupportsGettingCreationTime)
             {
                 Assert.Equal(DateTime.FromFileTimeUtc(0).Ticks, File.GetCreationTimeUtc(path).Ticks);
                 Assert.Equal(DateTime.FromFileTimeUtc(0).Ticks, new FileInfo(path).CreationTimeUtc.Ticks);
@@ -137,7 +160,7 @@ namespace System.IO.FileSystem.Tests
             Assert.Throws<FileNotFoundException>(() => new FileInfo(path).LastAccessTime);
             Assert.Throws<FileNotFoundException>(() => File.GetLastWriteTime(path));
             Assert.Throws<FileNotFoundException>(() => new FileInfo(path).LastWriteTime);
-            if (IOInputs.SupportsCreationTime)
+            if (IOInputs.SupportsGettingCreationTime)
             {
                 Assert.Throws<FileNotFoundException>(() => File.GetCreationTime(path));
                 Assert.Throws<FileNotFoundException>(() => new FileInfo(path).CreationTime);
@@ -148,7 +171,7 @@ namespace System.IO.FileSystem.Tests
             Assert.Throws<FileNotFoundException>(() => new FileInfo(path).LastAccessTimeUtc);
             Assert.Throws<FileNotFoundException>(() => File.GetLastWriteTimeUtc(path));
             Assert.Throws<FileNotFoundException>(() => new FileInfo(path).LastWriteTimeUtc);
-            if (IOInputs.SupportsCreationTime)
+            if (IOInputs.SupportsGettingCreationTime)
             {
                 Assert.Throws<FileNotFoundException>(() => File.GetCreationTimeUtc(path));
                 Assert.Throws<FileNotFoundException>(() => new FileInfo(path).CreationTimeUtc);

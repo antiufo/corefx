@@ -1,5 +1,6 @@
-// Copyright (c) Microsoft. All rights reserved.
-// Licensed under the MIT license. See LICENSE file in the project root for full license information.
+// Licensed to the .NET Foundation under one or more agreements.
+// The .NET Foundation licenses this file to you under the MIT license.
+// See the LICENSE file in the project root for more information.
 
 using System;
 
@@ -87,7 +88,15 @@ namespace System.Linq.Expressions.Interpreter
             var lengths = new int[_rank];
             for (int i = _rank - 1; i >= 0; i--)
             {
-                lengths[i] = ConvertHelper.ToInt32NoNull(frame.Pop());
+                var length = ConvertHelper.ToInt32NoNull(frame.Pop());
+
+                if (length < 0)
+                {
+                    // to make behavior aligned with array creation emitted by C# compiler
+                    throw new OverflowException();
+                }
+
+                lengths[i] = length;
             }
             var array = Array.CreateInstance(_elementType, lengths);
             frame.Push(array);

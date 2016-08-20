@@ -1,3 +1,8 @@
+// Licensed to the .NET Foundation under one or more agreements.
+// The .NET Foundation licenses this file to you under the MIT license.
+// See the LICENSE file in the project root for more information.
+
+using System.Runtime.InteropServices;
 using Xunit;
 
 namespace System.Security.Cryptography.X509Certificates.Tests
@@ -32,7 +37,7 @@ namespace System.Security.Cryptography.X509Certificates.Tests
         {
             using (X509Store store = new X509Store(Guid.NewGuid().ToString("N"), StoreLocation.CurrentUser))
             {
-                Assert.Throws<CryptographicException>(() => store.Open(OpenFlags.OpenExistingOnly));
+                Assert.ThrowsAny<CryptographicException>(() => store.Open(OpenFlags.OpenExistingOnly));
             }
         }
 
@@ -49,7 +54,7 @@ namespace System.Security.Cryptography.X509Certificates.Tests
                 // functionality.
                 if (!store.Certificates.Contains(cert))
                 {
-                    Assert.Throws<CryptographicException>(() => store.Add(cert));
+                    Assert.ThrowsAny<CryptographicException>(() => store.Add(cert));
                 }
             }
         }
@@ -77,7 +82,7 @@ namespace System.Security.Cryptography.X509Certificates.Tests
 
                 if (toAdd != null)
                 {
-                    Assert.Throws<CryptographicException>(() => store.Add(toAdd));
+                    Assert.ThrowsAny<CryptographicException>(() => store.Add(toAdd));
                 }
             }
         }
@@ -101,7 +106,7 @@ namespace System.Security.Cryptography.X509Certificates.Tests
 
                 if (store.Certificates.Contains(cert))
                 {
-                    Assert.Throws<CryptographicException>(() => store.Remove(cert));
+                    Assert.ThrowsAny<CryptographicException>(() => store.Remove(cert));
                 }
             }
         }
@@ -122,7 +127,7 @@ namespace System.Security.Cryptography.X509Certificates.Tests
             using (X509Store store = new X509Store(StoreName.My, StoreLocation.CurrentUser))
             using (X509Certificate2 cert = new X509Certificate2(TestData.MsCertificate))
             {
-                Assert.Throws<CryptographicException>(() => store.Add(cert));
+                Assert.ThrowsAny<CryptographicException>(() => store.Add(cert));
             }
         }
 
@@ -132,7 +137,72 @@ namespace System.Security.Cryptography.X509Certificates.Tests
             using (X509Store store = new X509Store(StoreName.My, StoreLocation.CurrentUser))
             using (X509Certificate2 cert = new X509Certificate2(TestData.MsCertificate))
             {
-                Assert.Throws<CryptographicException>(() => store.Remove(cert));
+                Assert.ThrowsAny<CryptographicException>(() => store.Remove(cert));
+            }
+        }
+
+        [Fact]
+        [PlatformSpecific(PlatformID.Windows)]
+        public static void OpenMachineMyStore_Supported()
+        {
+            using (X509Store store = new X509Store(StoreName.My, StoreLocation.LocalMachine))
+            {
+                store.Open(OpenFlags.ReadOnly);
+            }
+        }
+
+        [Fact]
+        [PlatformSpecific(PlatformID.AnyUnix)]
+        public static void OpenMachineMyStore_NotSupported()
+        {
+            using (X509Store store = new X509Store(StoreName.My, StoreLocation.LocalMachine))
+            {
+                Assert.Throws<PlatformNotSupportedException>(() => store.Open(OpenFlags.ReadOnly));
+            }
+        }
+
+        [Theory]
+        [PlatformSpecific(PlatformID.AnyUnix)]
+        [InlineData(OpenFlags.ReadOnly, false)]
+        [InlineData(OpenFlags.MaxAllowed, false)]
+        [InlineData(OpenFlags.ReadWrite, true)]
+        public static void OpenMachineRootStore_Permissions(OpenFlags permissions, bool shouldThrow)
+        {
+            using (X509Store store = new X509Store(StoreName.Root, StoreLocation.LocalMachine))
+            {
+                if (shouldThrow)
+                {
+                    Assert.Throws<PlatformNotSupportedException>(() => store.Open(permissions));
+                }
+                else
+                {
+                    // Assert.DoesNotThrow
+                    store.Open(permissions);
+                }
+            }
+        }
+
+        [Fact]
+        public static void MachineRootStore_NonEmpty()
+        {
+            // This test will fail on systems where the administrator has gone out of their
+            // way to prune the trusted CA list down below this threshold.
+            //
+            // As of 2016-01-25, Ubuntu 14.04 has 169, and CentOS 7.1 has 175, so that'd be
+            // quite a lot of pruning.
+            //
+            // And as of 2016-01-29 we understand the Homebrew-installed root store, with 180.
+            const int MinimumThreshold = 5;
+
+            using (X509Store store = new X509Store(StoreName.Root, StoreLocation.LocalMachine))
+            {
+                store.Open(OpenFlags.ReadOnly);
+
+                using (var storeCerts = new ImportedCollection(store.Certificates))
+                {
+                    int certCount = storeCerts.Collection.Count;
+                    Assert.InRange(certCount, MinimumThreshold, int.MaxValue);
+                }
             }
         }
     }

@@ -1,9 +1,10 @@
-// Copyright (c) Microsoft. All rights reserved.
-// Licensed under the MIT license. See LICENSE file in the project root for full license information.
+// Licensed to the .NET Foundation under one or more agreements.
+// The .NET Foundation licenses this file to you under the MIT license.
+// See the LICENSE file in the project root for more information.
 
 using Xunit;
 
-namespace System.IO.FileSystem.Tests
+namespace System.IO.Tests
 {
     public class Directory_Move : FileSystemTest
     {
@@ -127,11 +128,11 @@ namespace System.IO.FileSystem.Tests
         }
 
         [Fact]
-        public void Path_Longer_Than_MaxPath_Throws_Exception()
+        public void Path_Longer_Than_MaxLongPath_Throws_Exception()
         {
             string testDir = GetTestFilePath();
             Directory.CreateDirectory(testDir);
-            Assert.All((IOInputs.GetPathsLongerThanMaxPath()), (path) =>
+            Assert.All((IOInputs.GetPathsLongerThanMaxLongPath(GetTestFilePath())), (path) =>
             {
                 Assert.Throws<PathTooLongException>(() => Move(testDir, path));
                 Assert.Throws<PathTooLongException>(() => Move(path, testDir));
@@ -144,14 +145,26 @@ namespace System.IO.FileSystem.Tests
 
         [Fact]
         [PlatformSpecific(PlatformID.Windows)]
-        public void Path_With_Longer_Than_MaxDirectory_Throws_Exception()
+        public void Path_With_Longer_Than_MaxDirectory_Succeeds()
         {
             string testDir = GetTestFilePath();
             Directory.CreateDirectory(testDir);
-            Assert.All((IOInputs.GetPathsLongerThanMaxDirectory()), (path) =>
+            Assert.True(Directory.Exists(testDir), "test directory should exist");
+            Assert.All((IOInputs.GetPathsLongerThanMaxDirectory(GetTestFilePath())), (path) =>
             {
-                Assert.Throws<PathTooLongException>(() => Move(testDir, path));
-                Assert.Throws<PathTooLongException>(() => Move(path, testDir));
+                string baseDestinationPath = Path.GetDirectoryName(path);
+                if (!Directory.Exists(baseDestinationPath))
+                {
+                    Directory.CreateDirectory(baseDestinationPath);
+                }
+                Assert.True(Directory.Exists(baseDestinationPath), "base destination path should exist");
+
+                Move(testDir, path);
+                Assert.False(Directory.Exists(testDir), "source directory should exist");
+                Assert.True(Directory.Exists(path), "destination directory should exist");
+                Move(path, testDir);
+                Assert.False(Directory.Exists(path), "source directory should exist");
+                Assert.True(Directory.Exists(testDir), "destination directory should exist");
             });
         }
 

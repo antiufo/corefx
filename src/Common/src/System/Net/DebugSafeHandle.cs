@@ -1,8 +1,9 @@
-// Copyright (c) Microsoft. All rights reserved.
-// Licensed under the MIT license. See LICENSE file in the project root for full license information.
+// Licensed to the .NET Foundation under one or more agreements.
+// The .NET Foundation licenses this file to you under the MIT license.
+// See the LICENSE file in the project root for more information.
 
 using Microsoft.Win32.SafeHandles;
-using System.Diagnostics.CodeAnalysis;
+
 using System.Net.NetworkInformation;
 using System.Net.Sockets;
 using System.Runtime.CompilerServices;
@@ -33,8 +34,8 @@ namespace System.Net
 
         private void Trace()
         {
-            _trace = "WARNING! GC-ed  >>" + this.GetType().FullName + "<< (should be excplicitly closed) \r\n";
-#if TRAVE
+            _trace = "WARNING! GC-ed  >>" + this.GetType().ToString() + "<< (should be explicitly closed) \r\n";
+#if TRACE_VERBOSE
             string stacktrace = Environment.StackTrace;
             _trace += stacktrace;
 #endif
@@ -43,7 +44,10 @@ namespace System.Net
         ~DebugSafeHandle()
         {
             GlobalLog.SetThreadSource(ThreadKinds.Finalization);
-            GlobalLog.Print(_trace);
+            if (GlobalLog.IsEnabled)
+            {
+                GlobalLog.Print(_trace);
+            }
         }
     }
 #endif // DEBUG

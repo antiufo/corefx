@@ -1,10 +1,10 @@
-// Copyright (c) Microsoft. All rights reserved.
-// Licensed under the MIT license. See LICENSE file in the project root for full license information.
+// Licensed to the .NET Foundation under one or more agreements.
+// The .NET Foundation licenses this file to you under the MIT license.
+// See the LICENSE file in the project root for more information.
 
-using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.IO;
-using System.Threading;
 using System.Threading.Tasks;
 
 namespace System.Net
@@ -13,18 +13,18 @@ namespace System.Net
     {
         internal class WebRequestPrefixElement
         {
-            public string Prefix;
-            public IWebRequestCreate Creator;
+            public readonly string Prefix;
+            public readonly IWebRequestCreate Creator;
 
-            public WebRequestPrefixElement(string P, IWebRequestCreate C)
+            public WebRequestPrefixElement(string prefix, IWebRequestCreate creator)
             {
-                Prefix = P;
-                Creator = C;
+                Prefix = prefix;
+                Creator = creator;
             }
         }
 
         private static volatile List<WebRequestPrefixElement> s_prefixList;
-        private static object s_internalSyncObject = new object();
+        private static readonly object s_internalSyncObject = new object();
 
         // Create a WebRequest.
         //
@@ -42,9 +42,9 @@ namespace System.Net
         //     Newly created WebRequest.
         private static WebRequest Create(Uri requestUri, bool useUriBase)
         {
-            if (Logging.On)
+            if (NetEventSource.Log.IsEnabled())
             {
-                Logging.Enter(Logging.Web, "WebRequest", "Create", requestUri.ToString());
+                NetEventSource.Enter(NetEventSource.ComponentType.Requests, "WebRequest", "Create", requestUri.ToString());
             }
 
             string LookupUri;
@@ -106,16 +106,16 @@ namespace System.Net
             {
                 // We found a match, so just call the creator and return what it does.
                 webRequest = Current.Creator.Create(requestUri);
-                if (Logging.On)
+                if (NetEventSource.Log.IsEnabled())
                 {
-                    Logging.Exit(Logging.Web, "WebRequest", "Create", webRequest);
+                    NetEventSource.Exit(NetEventSource.ComponentType.Requests, "WebRequest", "Create", webRequest);
                 }
                 return webRequest;
             }
 
-            if (Logging.On)
+            if (NetEventSource.Log.IsEnabled())
             {
-                Logging.Exit(Logging.Web, "WebRequest", "Create", null);
+                NetEventSource.Exit(NetEventSource.ComponentType.Requests, "WebRequest", "Create", null);
             }
 
             // Otherwise no match, throw an exception.
@@ -136,7 +136,7 @@ namespace System.Net
         {
             if (requestUriString == null)
             {
-                throw new ArgumentNullException("requestUriString");
+                throw new ArgumentNullException(nameof(requestUriString));
             }
 
             return Create(new Uri(requestUriString), false);
@@ -156,7 +156,7 @@ namespace System.Net
         {
             if (requestUri == null)
             {
-                throw new ArgumentNullException("requestUri");
+                throw new ArgumentNullException(nameof(requestUri));
             }
 
             return Create(requestUri, false);
@@ -177,7 +177,7 @@ namespace System.Net
         {
             if (requestUri == null)
             {
-                throw new ArgumentNullException("requestUri");
+                throw new ArgumentNullException(nameof(requestUri));
             }
 
             return Create(requestUri, true);
@@ -187,7 +187,7 @@ namespace System.Net
         {
             if (requestUriString == null)
             {
-                throw new ArgumentNullException("requestUriString");
+                throw new ArgumentNullException(nameof(requestUriString));
             }
             return CreateHttp(new Uri(requestUriString));
         }
@@ -196,7 +196,7 @@ namespace System.Net
         {
             if (requestUri == null)
             {
-                throw new ArgumentNullException("requestUri");
+                throw new ArgumentNullException(nameof(requestUri));
             }
             if ((requestUri.Scheme != "http") && (requestUri.Scheme != "https"))
             {
@@ -230,11 +230,11 @@ namespace System.Net
 
             if (prefix == null)
             {
-                throw new ArgumentNullException("prefix");
+                throw new ArgumentNullException(nameof(prefix));
             }
             if (creator == null)
             {
-                throw new ArgumentNullException("creator");
+                throw new ArgumentNullException(nameof(creator));
             }
 
             // Lock this object, then walk down PrefixList looking for a place to
@@ -285,7 +285,7 @@ namespace System.Net
                     if (prefix.Length == Current.Prefix.Length)
                     {
                         // They're the same length.
-                        if (String.Compare(Current.Prefix, prefix, StringComparison.OrdinalIgnoreCase) == 0)
+                        if (string.Equals(Current.Prefix, prefix, StringComparison.OrdinalIgnoreCase))
                         {
                             // ...and the strings are identical. This is an error.
                             Error = true;
@@ -352,12 +352,15 @@ namespace System.Net
                     {
                         if (s_prefixList == null)
                         {
-                            List<WebRequestPrefixElement> prefixList = new List<WebRequestPrefixElement>();
+                            var httpRequestCreator = new HttpRequestCreator();
 
-                            prefixList.Add(new WebRequestPrefixElement("http:", new HttpRequestCreator()));
-                            prefixList.Add(new WebRequestPrefixElement("https:", new HttpRequestCreator()));
-                            prefixList.Add(new WebRequestPrefixElement("file:", new HttpRequestCreator()));
-                            prefixList.Add(new WebRequestPrefixElement("ftp:", new HttpRequestCreator()));
+                            const int Count = 2;
+                            var prefixList = new List<WebRequestPrefixElement>(Count)
+                            {
+                                new WebRequestPrefixElement("http:", httpRequestCreator),
+                                new WebRequestPrefixElement("https:", httpRequestCreator)
+                            };
+                            Debug.Assert(prefixList.Count == Count);
 
                             s_prefixList = prefixList;
                         }
@@ -431,18 +434,29 @@ namespace System.Net
 
         public abstract Stream EndGetRequestStream(IAsyncResult asyncResult);
 
-        // Offload to a different thread to avoid blocking the caller durring request submission.
         public virtual Task<Stream> GetRequestStreamAsync()
         {
-            return Task.Run(() => Task<Stream>.Factory.FromAsync(this.BeginGetRequestStream,
-                this.EndGetRequestStream, null));
+            // Offload to a different thread to avoid blocking the caller during request submission.
+            // We use Task.Run rather than Task.Factory.StartNew even though StartNew would let us pass 'this'
+            // as a state argument to avoid the closure to capture 'this' and the associated delegate.
+            // This is because the task needs to call FromAsync and marshal the inner Task out, and
+            // Task.Run's implementation of this is sufficiently more efficient than what we can do with 
+            // Unwrap() that it's worth it to just rely on Task.Run and accept the closure/delegate.
+            return Task.Run(() =>
+                Task<Stream>.Factory.FromAsync(
+                    (callback, state) => ((WebRequest)state).BeginGetRequestStream(callback, state),
+                    iar => ((WebRequest)iar.AsyncState).EndGetRequestStream(iar),
+                    this));
         }
 
-        // Offload to a different thread to avoid blocking the caller durring request submission.
         public virtual Task<WebResponse> GetResponseAsync()
         {
-            return Task.Run(() => Task<WebResponse>.Factory.FromAsync(this.BeginGetResponse,
-                this.EndGetResponse, null));
+            // See comment in GetRequestStreamAsync().  Same logic applies here.
+            return Task.Run(() =>
+                Task<WebResponse>.Factory.FromAsync(
+                    (callback, state) => ((WebRequest)state).BeginGetResponse(callback, state),
+                    iar => ((WebRequest)iar.AsyncState).EndGetResponse(iar),
+                    this));
         }
 
         public abstract void Abort();

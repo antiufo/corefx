@@ -1,9 +1,10 @@
-﻿// Copyright (c) Microsoft. All rights reserved.
-// Licensed under the MIT license. See LICENSE file in the project root for full license information.
+// Licensed to the .NET Foundation under one or more agreements.
+// The .NET Foundation licenses this file to you under the MIT license.
+// See the LICENSE file in the project root for more information.
 
 using Xunit;
 
-namespace System.IO.FileSystem.Tests
+namespace System.IO.Tests
 {
     public class File_Create_str : FileSystemTest
     {
@@ -166,7 +167,7 @@ namespace System.IO.FileSystem.Tests
         #region PlatformSpecific
 
         [Fact]
-        [PlatformSpecific(PlatformID.Linux)]
+        [PlatformSpecific(CaseSensitivePlatforms)]
         public void CaseSensitive()
         {
             DirectoryInfo testDir = Directory.CreateDirectory(GetTestFilePath());
@@ -183,7 +184,7 @@ namespace System.IO.FileSystem.Tests
         }
 
         [Fact]
-        [PlatformSpecific(PlatformID.Windows | PlatformID.OSX)]
+        [PlatformSpecific(CaseInsensitivePlatforms)]
         public void CaseInsensitive()
         {
             DirectoryInfo testDir = Directory.CreateDirectory(GetTestFilePath());
@@ -202,21 +203,6 @@ namespace System.IO.FileSystem.Tests
             Assert.Throws<ArgumentException>(() => Create(Path.Combine(testDir.FullName, "*")));
             Assert.Throws<ArgumentException>(() => Create(Path.Combine(testDir.FullName, "Test*t")));
             Assert.Throws<ArgumentException>(() => Create(Path.Combine(testDir.FullName, "*Tes*t")));
-        }
-
-        [Fact]
-        [PlatformSpecific(PlatformID.Windows)]
-        public void WindowsRemoveExtraneousWhitespace()
-        {
-            DirectoryInfo testDir = Directory.CreateDirectory(GetTestFilePath());
-            string testFile1 = Path.Combine(testDir.FullName, GetTestFileName());
-            string testFile2 = Path.Combine(" ", testDir.FullName, " ", GetTestFileName());
-            using (Create(string.Format(" {0}", testFile1)))
-            using (Create(testFile2))
-            {
-                Assert.True(File.Exists(testFile1));
-                Assert.True(File.Exists(testFile2));
-            }
         }
 
         [Fact]

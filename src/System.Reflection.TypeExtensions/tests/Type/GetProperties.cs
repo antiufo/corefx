@@ -1,11 +1,10 @@
-// Copyright (c) Microsoft. All rights reserved.
-// Licensed under the MIT license. See LICENSE file in the project root for full license information.
+// Licensed to the .NET Foundation under one or more agreements.
+// The .NET Foundation licenses this file to you under the MIT license.
+// See the LICENSE file in the project root for more information.
 
 using Xunit;
-using System;
-using System.Reflection;
 
-namespace System.Reflection.Compatibility.UnitTests.TypeTests
+namespace System.Reflection.Tests
 {
     public class GetPropertiesTests
     {
@@ -39,38 +38,38 @@ namespace System.Reflection.Compatibility.UnitTests.TypeTests
             for (int i = 0; i < propertiesReturned.Length; i++)
             {
                 foundIndex = Array.BinarySearch(propertiesExpected, propertiesReturned[i].ToString());
-                Assert.False(foundIndex < 0, "An unexpected property " + propertiesReturned[i].ToString() + " was returned");                
+                Assert.False(foundIndex < 0, "An unexpected property " + propertiesReturned[i].ToString() + " was returned");
             }
         }
 
         [Fact]
         public void Test1()
         {
-            TryGetProperties("System.Reflection.Compatibility.UnitTests.TypeTests.GenericClassWithVarArgMethod`1[System.String]", new string[] { "System.String publicField" });
+            TryGetProperties("System.Reflection.Tests.GenericClassWithVarArgMethod`1[System.String]", new string[] { "System.String publicField" });
         }
 
         [Fact]
         public void Test2()
         {
-            TryGetProperties("System.Reflection.Compatibility.UnitTests.TypeTests.Cat`1[System.Int32]", new string[] { "System.Object[] StuffConsumed" });
+            TryGetProperties("System.Reflection.Tests.Cat`1[System.Int32]", new string[] { "System.Object[] StuffConsumed" });
         }
 
         [Fact]
         public void Test3()
         {
-            TryGetProperties("System.Reflection.Compatibility.UnitTests.TypeTests.GenericClassWithVarArgMethod`1[System.Int32]", new string[] { "Int32 publicField" });
+            TryGetProperties("System.Reflection.Tests.GenericClassWithVarArgMethod`1[System.Int32]", new string[] { "Int32 publicField" });
         }
 
         [Fact]
         public void Test4()
         {
-            TryGetProperties("System.Reflection.Compatibility.UnitTests.TypeTests.GenericClassWithVarArgMethod`1", new string[] { "T publicField" });
+            TryGetProperties("System.Reflection.Tests.GenericClassWithVarArgMethod`1", new string[] { "T publicField" });
         }
 
         [Fact]
         public void Test5()
         {
-            TryGetProperties("System.Reflection.Compatibility.UnitTests.TypeTests.ClassWithVarArgMethod", new string[] { "Int32 publicField" });
+            TryGetProperties("System.Reflection.Tests.ClassWithVarArgMethod", new string[] { "Int32 publicField" });
         }
 
         [Fact]

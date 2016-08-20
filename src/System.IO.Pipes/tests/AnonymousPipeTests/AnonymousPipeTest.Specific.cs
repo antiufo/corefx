@@ -1,5 +1,6 @@
-﻿// Copyright (c) Microsoft. All rights reserved.
-// Licensed under the MIT license. See LICENSE file in the project root for full license information.
+// Licensed to the .NET Foundation under one or more agreements.
+// The .NET Foundation licenses this file to you under the MIT license.
+// See the LICENSE file in the project root for more information.
 
 using Xunit;
 
@@ -108,11 +109,24 @@ namespace System.IO.Pipes.Tests
         }
 
         [Fact]
-        [PlatformSpecific(~PlatformID.Linux)]
-        public static void BufferSizeRoundtripping()
+        [PlatformSpecific(PlatformID.OSX)]
+        public static void OSX_BufferSizeNotSupported()
         {
-            // On systems other than Linux, setting the buffer size of the server will only set
-            // set the buffer size of the client if the flow of the pipe is towards the client i.e.
+            int desiredBufferSize = 10;
+            using (var server = new AnonymousPipeServerStream(PipeDirection.Out, HandleInheritability.None, desiredBufferSize))
+            using (var client = new AnonymousPipeClientStream(PipeDirection.In, server.ClientSafePipeHandle))
+            {
+                Assert.Throws<PlatformNotSupportedException>(() => server.OutBufferSize);
+                Assert.Throws<PlatformNotSupportedException>(() => client.InBufferSize);
+            }
+        }
+
+        [Fact]
+        [PlatformSpecific(PlatformID.Windows)]
+        public static void Windows_BufferSizeRoundtripping()
+        {
+            // On Windows, setting the buffer size of the server will only set
+            // the buffer size of the client if the flow of the pipe is towards the client i.e.
             // the client is defined with PipeDirection.In
 
             int desiredBufferSize = 10;

@@ -1,14 +1,11 @@
-﻿// Copyright (c) Microsoft. All rights reserved.
-// Licensed under the MIT license. See LICENSE file in the project root for full license information.
+// Licensed to the .NET Foundation under one or more agreements.
+// The .NET Foundation licenses this file to you under the MIT license.
+// See the LICENSE file in the project root for more information.
 
-using System;
+using System.Collections;
 using System.Collections.Generic;
-using System.Linq;
-using System.Linq.Expressions;
-using System.Runtime.CompilerServices;
-using Tests.ExpressionCompiler;
 
-namespace Tests.ExpressionCompiler
+namespace System.Linq.Expressions.Tests
 {
     public interface I
     {
@@ -75,7 +72,10 @@ namespace Tests.ExpressionCompiler
     public enum E
     {
         A = 1,
-        B = 2
+        B = 2,
+        Red = 0,
+        Green,
+        Blue
     }
 
     public enum El : long
@@ -83,6 +83,13 @@ namespace Tests.ExpressionCompiler
         A,
         B,
         C
+    }
+
+    public enum Eu : uint
+    {
+        Foo,
+        Bar,
+        Baz
     }
 
     public struct S : IEquatable<S>
@@ -199,5 +206,85 @@ namespace Tests.ExpressionCompiler
 
     public class BaseClass
     {
+    }
+
+    public class FC
+    {
+        public int II;
+        public static int SI;
+        public const int CI = 42;
+        public static readonly int RI = 42;
+    }
+
+    public struct FS
+    {
+        public int II;
+        public static int SI;
+        public const int CI = 42;
+        public static readonly int RI = 42;
+    }
+
+    public class PC
+    {
+        public int II { get; set; }
+        public static int SI { get; set; }
+
+        public int this[int i]
+        {
+            get { return 1; }
+            set { }
+        }
+    }
+
+    public struct PS
+    {
+        public int II { get; set; }
+        public static int SI { get; set; }
+    }
+
+    internal class CompilationTypes : IEnumerable<object[]>
+    {
+        private static readonly object[] False = new object[] { false };
+        private static readonly object[] True = new object[] { true };
+
+        public IEnumerator<object[]> GetEnumerator()
+        {
+            yield return False;
+            yield return True;
+        }
+
+        IEnumerator IEnumerable.GetEnumerator()
+        {
+            return GetEnumerator();
+        }
+    }
+
+    internal class NoOpVisitor : ExpressionVisitor
+    {
+        internal static readonly NoOpVisitor Instance = new NoOpVisitor();
+
+        private NoOpVisitor()
+        {
+        }
+    }
+
+    public static class Unreadable<T>
+    {
+        public static T WriteOnly { set { } }
+    }
+
+    public class GenericClass<T>
+    {
+        public void Method() { }
+    }
+
+    public class NonGenericClass
+    {
+        #pragma warning disable 0067
+        public event EventHandler Event;
+        #pragma warning restore 0067
+
+        public void GenericMethod<T>() { }
+        public static void StaticMethod() { }
     }
 }

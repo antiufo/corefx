@@ -1,12 +1,13 @@
-// Copyright (c) Microsoft. All rights reserved.
-// Licensed under the MIT license. See LICENSE file in the project root for full license information.
+// Licensed to the .NET Foundation under one or more agreements.
+// The .NET Foundation licenses this file to you under the MIT license.
+// See the LICENSE file in the project root for more information.
 
 using System;
 using System.Collections.Generic;
-using System.ComponentModel;
 using System.Diagnostics;
 using System.Globalization;
 using System.IO;
+using System.Text;
 
 internal static partial class Interop
 {
@@ -99,8 +100,7 @@ internal static partial class Interop
             {
                 return ParseMapsModulesCore(File.ReadLines(GetMapsFilePathForProcess(pid)));
             }
-            catch (FileNotFoundException) { }
-            catch (DirectoryNotFoundException) { }
+            catch (IOException) { }
             catch (UnauthorizedAccessException) { }
 
             return Array.Empty<ParsedMapsModule>();
@@ -181,19 +181,37 @@ internal static partial class Interop
             return GetTaskDirectoryPathForProcess(pid) + tid.ToString(CultureInfo.InvariantCulture) + StatFileName;
         }
 
-        internal static ParsedStat ReadStatFile(int pid)
+        internal static bool TryReadStatFile(int pid, out ParsedStat result, ReusableTextReader reusableReader)
         {
-            return ParseStatFile(GetStatFilePathForProcess(pid));
+            bool b = TryParseStatFile(GetStatFilePathForProcess(pid), out result, reusableReader);
+            Debug.Assert(!b || result.pid == pid, "Expected process ID from stat file to match supplied pid");
+            return b;
         }
 
-        internal static ParsedStat ReadStatFile(int pid, int tid)
+        internal static bool TryReadStatFile(int pid, int tid, out ParsedStat result, ReusableTextReader reusableReader)
         {
-            return ParseStatFile(GetStatFilePathForThread(pid, tid));
+            bool b = TryParseStatFile(GetStatFilePathForThread(pid, tid), out result, reusableReader);
+            Debug.Assert(!b || result.pid == tid, "Expected thread ID from stat file to match supplied tid");
+            return b;
         }
 
-        private static ParsedStat ParseStatFile(string statFilePath)
+        private static bool TryParseStatFile(string statFilePath, out ParsedStat result, ReusableTextReader reusableReader)
         {
-            string statFileContents = File.ReadAllText(statFilePath);
+            string statFileContents;
+            try
+            {
+                using (var source = new FileStream(statFilePath, FileMode.Open, FileAccess.Read, FileShare.Read, bufferSize: 1, useAsync: false))
+                {
+                    statFileContents = reusableReader.ReadAllText(source);
+                }
+            }
+            catch (IOException)
+            {
+                // Between the time that we get an ID and the time that we try to read the associated stat
+                // file(s), the process could be gone.
+                result = default(ParsedStat);
+                return false;
+            }
 
             var parser = new StringParser(statFileContents, ' ');
             var results = default(ParsedStat);
@@ -239,24 +257,32 @@ internal static partial class Interop
             parser.MoveNextOrFail(); // startcode
             parser.MoveNextOrFail(); // endcode
             results.startstack = parser.ParseNextUInt64();
-            parser.MoveNextOrFail(); // kstkesp
-            parser.MoveNextOrFail(); // kstkeip
-            parser.MoveNextOrFail(); // signal
-            parser.MoveNextOrFail(); // blocked
-            parser.MoveNextOrFail(); // sigignore
-            parser.MoveNextOrFail(); // sigcatch
-            parser.MoveNextOrFail(); // wchan
-            parser.MoveNextOrFail(); // nswap
-            parser.MoveNextOrFail(); // cnswap
-            parser.MoveNextOrFail(); // exit_signal
-            parser.MoveNextOrFail(); // processor
-            parser.MoveNextOrFail(); // rt_priority
-            parser.MoveNextOrFail(); // policy
-            parser.MoveNextOrFail(); // delayacct_blkio_ticks
-            parser.MoveNextOrFail(); // guest_time
-            parser.MoveNextOrFail(); // cguest_time
 
-            return results;
+            // The following lines are commented out as there's no need to parse through
+            // the rest of the entry (we've gotten all of the data we need).  Should any
+            // of these fields be needed in the future, uncomment all of the lines up
+            // through and including the one that's needed.  For now, these are being left 
+            // commented to document what's available in the remainder of the entry.
+
+            //parser.MoveNextOrFail(); // kstkesp
+            //parser.MoveNextOrFail(); // kstkeip
+            //parser.MoveNextOrFail(); // signal
+            //parser.MoveNextOrFail(); // blocked
+            //parser.MoveNextOrFail(); // sigignore
+            //parser.MoveNextOrFail(); // sigcatch
+            //parser.MoveNextOrFail(); // wchan
+            //parser.MoveNextOrFail(); // nswap
+            //parser.MoveNextOrFail(); // cnswap
+            //parser.MoveNextOrFail(); // exit_signal
+            //parser.MoveNextOrFail(); // processor
+            //parser.MoveNextOrFail(); // rt_priority
+            //parser.MoveNextOrFail(); // policy
+            //parser.MoveNextOrFail(); // delayacct_blkio_ticks
+            //parser.MoveNextOrFail(); // guest_time
+            //parser.MoveNextOrFail(); // cguest_time
+
+            result = results;
+            return true;
         }
     }
 }

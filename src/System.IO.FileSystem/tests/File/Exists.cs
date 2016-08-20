@@ -1,9 +1,10 @@
-// Copyright (c) Microsoft. All rights reserved.
-// Licensed under the MIT license. See LICENSE file in the project root for full license information.
+// Licensed to the .NET Foundation under one or more agreements.
+// The .NET Foundation licenses this file to you under the MIT license.
+// See the LICENSE file in the project root for more information.
 
 using Xunit;
 
-namespace System.IO.FileSystem.Tests
+namespace System.IO.Tests
 {
     public class File_Exists : FileSystemTest
     {
@@ -96,7 +97,7 @@ namespace System.IO.FileSystem.Tests
         [Fact]
         public void DirectoryLongerThanMaxDirectoryAsPath_DoesntThrow()
         {
-            Assert.All((IOInputs.GetPathsLongerThanMaxDirectory()), (path) =>
+            Assert.All((IOInputs.GetPathsLongerThanMaxDirectory(GetTestFilePath())), (path) =>
             {
                 Assert.False(Exists(path));
             });
@@ -105,10 +106,33 @@ namespace System.IO.FileSystem.Tests
         [Fact]
         public void DirectoryLongerThanMaxPathAsPath_DoesntThrow()
         {
-            Assert.All((IOInputs.GetPathsLongerThanMaxPath()), (path) =>
+            Assert.All((IOInputs.GetPathsLongerThanMaxPath(GetTestFilePath())), (path) =>
             {
                 Assert.False(Exists(path), path);
             });
+        }
+
+        [ConditionalFact(nameof(CanCreateSymbolicLinks))]
+        public void SymLinksMayExistIndependentlyOfTarget()
+        {
+            var path = GetTestFilePath();
+            var linkPath = GetTestFilePath();
+
+            File.Create(path).Dispose();
+            Assert.True(MountHelper.CreateSymbolicLink(linkPath, path, isDirectory: false));
+
+            // Both the symlink and the target exist
+            Assert.True(File.Exists(path), "path should exist");
+            Assert.True(File.Exists(linkPath), "linkPath should exist");
+
+            // Delete the target.  The symlink should still exist
+            File.Delete(path);
+            Assert.False(File.Exists(path), "path should now not exist");
+            Assert.True(File.Exists(linkPath), "linkPath should still exist");
+
+            // Now delete the symlink.
+            File.Delete(linkPath);
+            Assert.False(File.Exists(linkPath), "linkPath should no longer exist");
         }
 
         #endregion
@@ -127,7 +151,7 @@ namespace System.IO.FileSystem.Tests
         }
 
         [Fact]
-        [PlatformSpecific(PlatformID.Windows | PlatformID.OSX)]
+        [PlatformSpecific(CaseInsensitivePlatforms)]
         public void DoesCaseInsensitiveInvariantComparions()
         {
             FileInfo testFile = new FileInfo(GetTestFilePath());
@@ -138,7 +162,7 @@ namespace System.IO.FileSystem.Tests
         }
 
         [Fact]
-        [PlatformSpecific(PlatformID.Linux | PlatformID.FreeBSD)]
+        [PlatformSpecific(CaseSensitivePlatforms)]
         public void DoesCaseSensitiveComparions()
         {
             FileInfo testFile = new FileInfo(GetTestFilePath());
@@ -199,6 +223,15 @@ namespace System.IO.FileSystem.Tests
             {
                 Assert.False(Exists(component));
             });
+        }
+
+        [Fact]
+        [PlatformSpecific(PlatformID.AnyUnix)]
+        public void FalseForNonRegularFile()
+        {
+            string fileName = GetTestFilePath();
+            Assert.Equal(0, mkfifo(fileName, 0));
+            Assert.True(File.Exists(fileName));
         }
 
         #endregion

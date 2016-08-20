@@ -1,5 +1,6 @@
-// Copyright (c) Microsoft. All rights reserved.
-// Licensed under the MIT license. See LICENSE file in the project root for full license information.
+// Licensed to the .NET Foundation under one or more agreements.
+// The .NET Foundation licenses this file to you under the MIT license.
+// See the LICENSE file in the project root for more information.
 
 using System;
 using System.Runtime.InteropServices;
@@ -7,21 +8,6 @@ using System.Security;
 
 namespace Microsoft.Win32.SafeHandles
 {
-    internal abstract class SafeHandleZeroOrMinusOneIsInvalid : SafeHandle
-    {
-        protected SafeHandleZeroOrMinusOneIsInvalid(bool ownsHandle) : base(IntPtr.Zero, ownsHandle)
-        {
-        }
-
-        public override bool IsInvalid
-        {
-            get
-            {
-                return handle == IntPtr.Zero || handle == new IntPtr(-1);
-            }
-        }
-    }
-
     internal sealed class SafeLsaMemoryHandle : SafeBuffer
     {
         private SafeLsaMemoryHandle() : base(true) { }

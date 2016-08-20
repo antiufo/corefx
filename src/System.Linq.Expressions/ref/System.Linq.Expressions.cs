@@ -1,5 +1,6 @@
-// Copyright (c) Microsoft. All rights reserved.
-// Licensed under the MIT license. See LICENSE file in the project root for full license information.
+// Licensed to the .NET Foundation under one or more agreements.
+// The .NET Foundation licenses this file to you under the MIT license.
+// See the LICENSE file in the project root for more information.
 // ------------------------------------------------------------------------------
 // Changes to this file must follow the http://aka.ms/api-review process.
 // ------------------------------------------------------------------------------
@@ -431,6 +432,7 @@ namespace System.Linq.Expressions
         internal Expression() { }
         protected internal override System.Linq.Expressions.Expression Accept(System.Linq.Expressions.ExpressionVisitor visitor) { return default(System.Linq.Expressions.Expression); }
         public new TDelegate Compile() { return default(TDelegate); }
+        public new TDelegate Compile(bool preferInterpretation) { return default(TDelegate); }
         public System.Linq.Expressions.Expression<TDelegate> Update(System.Linq.Expressions.Expression body, System.Collections.Generic.IEnumerable<System.Linq.Expressions.ParameterExpression> parameters) { return default(System.Linq.Expressions.Expression<TDelegate>); }
     }
     public enum ExpressionType
@@ -645,6 +647,7 @@ namespace System.Linq.Expressions
         public bool TailCall { get { return default(bool); } }
         public sealed override System.Type Type { get { return default(System.Type); } }
         public System.Delegate Compile() { return default(System.Delegate); }
+        public System.Delegate Compile(bool preferInterpretation) { return default(System.Delegate); }
     }
     public sealed partial class ListInitExpression : System.Linq.Expressions.Expression
     {

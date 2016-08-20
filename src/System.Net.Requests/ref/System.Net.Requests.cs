@@ -1,5 +1,6 @@
-// Copyright (c) Microsoft. All rights reserved.
-// Licensed under the MIT license. See LICENSE file in the project root for full license information.
+// Licensed to the .NET Foundation under one or more agreements.
+// The .NET Foundation licenses this file to you under the MIT license.
+// See the LICENSE file in the project root for more information.
 // ------------------------------------------------------------------------------
 // Changes to this file must follow the http://aka.ms/api-review process.
 // ------------------------------------------------------------------------------
@@ -56,8 +57,8 @@ namespace System.Net
     {
         public WebException() { }
         public WebException(string message) { }
-        public WebException(string message, System.Exception inner) { }
-        public WebException(string message, System.Exception inner, System.Net.WebExceptionStatus status, System.Net.WebResponse response) { }
+        public WebException(string message, System.Exception innerException) { }
+        public WebException(string message, System.Exception innerException, System.Net.WebExceptionStatus status, System.Net.WebResponse response) { }
         public WebException(string message, System.Net.WebExceptionStatus status) { }
         public System.Net.WebResponse Response { get { return default(System.Net.WebResponse); } }
         public System.Net.WebExceptionStatus Status { get { return default(System.Net.WebExceptionStatus); } }

@@ -1,5 +1,6 @@
-// Copyright (c) Microsoft. All rights reserved.
-// Licensed under the MIT license. See LICENSE file in the project root for full license information.
+// Licensed to the .NET Foundation under one or more agreements.
+// The .NET Foundation licenses this file to you under the MIT license.
+// See the LICENSE file in the project root for more information.
 
 using System;
 using System.Collections.Generic;
@@ -18,20 +19,14 @@ namespace System.Runtime.Serialization.Json
 {
 #if NET_NATIVE
     public class XmlObjectSerializerReadContextComplexJson : XmlObjectSerializerReadContextComplex
-#elif MERGE_DCJS
-    internal class XmlObjectSerializerReadContextComplexJson : XmlObjectSerializerReadContextComplex
 #else
-    internal class XmlObjectSerializerReadContextComplexJson : XmlObjectSerializerReadContext
+    internal class XmlObjectSerializerReadContextComplexJson : XmlObjectSerializerReadContextComplex
 #endif
     {
         private DataContractJsonSerializer _jsonSerializer;
-#if !NET_NATIVE && !MERGE_DCJS
-        private bool _isSerializerKnownDataContractsSetExplicit;
-#endif
-#if NET_NATIVE || MERGE_DCJS
         private DateTimeFormat _dateTimeFormat;
         private bool _useSimpleDictionaryFormat;
-#endif
+
         public XmlObjectSerializerReadContextComplexJson(DataContractJsonSerializer serializer, DataContract rootTypeDataContract)
             : base(null, int.MaxValue, new StreamingContext(), true)
         {
@@ -40,7 +35,6 @@ namespace System.Runtime.Serialization.Json
             _jsonSerializer = serializer;
         }
 
-#if NET_NATIVE || MERGE_DCJS
         internal XmlObjectSerializerReadContextComplexJson(DataContractJsonSerializerImpl serializer, DataContract rootTypeDataContract)
             : base(serializer, serializer.MaxItemsInObjectGraph, new StreamingContext(), false)
         {
@@ -87,23 +81,6 @@ namespace System.Runtime.Serialization.Json
             HandleMemberNotFound(xmlReader, extensionData, memberIndex);
             return length;
         }
-#endif
-
-#if !NET_NATIVE && !MERGE_DCJS
-        internal override DataContractDictionary SerializerKnownDataContracts
-        {
-            get
-            {
-                // This field must be initialized during construction by serializers using data contracts.
-                if (!_isSerializerKnownDataContractsSetExplicit)
-                {
-                    this.serializerKnownDataContracts = _jsonSerializer.KnownDataContracts;
-                    _isSerializerKnownDataContractsSetExplicit = true;
-                }
-                return this.serializerKnownDataContracts;
-            }
-        }
-#endif
 
         internal IList<Type> SerializerKnownTypeList
         {
@@ -113,7 +90,6 @@ namespace System.Runtime.Serialization.Json
             }
         }
 
-#if NET_NATIVE || MERGE_DCJS
         public bool UseSimpleDictionaryFormat
         {
             get
@@ -169,7 +145,6 @@ namespace System.Runtime.Serialization.Json
             }
             xmlReader.MoveToElement();
         }
-#endif
 
         internal DataContract ResolveDataContractFromType(string typeName, string typeNs, DataContract memberTypeContract)
         {
@@ -295,7 +270,6 @@ namespace System.Runtime.Serialization.Json
             return dataContract;
         }
 
-#if NET_NATIVE || MERGE_DCJS
         internal static bool TryGetJsonLocalName(XmlReaderDelegator xmlReader, out string name)
         {
             if (xmlReader.IsStartElement(JsonGlobals.itemDictionaryString, JsonGlobals.itemDictionaryString))
@@ -319,9 +293,8 @@ namespace System.Runtime.Serialization.Json
             }
             return name;
         }
-#endif
 
-#if !NET_NATIVE && MERGE_DCJS
+#if !NET_NATIVE
         public static void ThrowDuplicateMemberException(object obj, XmlDictionaryString[] memberNames, int memberIndex)
         {
             throw DiagnosticUtility.ExceptionUtility.ThrowHelperError(new SerializationException(

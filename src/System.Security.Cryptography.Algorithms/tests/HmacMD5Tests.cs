@@ -1,5 +1,6 @@
-// Copyright (c) Microsoft. All rights reserved.
-// Licensed under the MIT license. See LICENSE file in the project root for full license information.
+// Licensed to the .NET Foundation under one or more agreements.
+// The .NET Foundation licenses this file to you under the MIT license.
+// See the LICENSE file in the project root for more information.
 
 using Test.Cryptography;
 using Xunit;
@@ -29,6 +30,13 @@ namespace System.Security.Cryptography.Hashing.Algorithms.Tests
         {
             return new HMACMD5();
         }
+
+        protected override HashAlgorithm CreateHashAlgorithm()
+        {
+            return MD5.Create();
+        }
+
+        protected override int BlockSize { get { return 64; } }
 
         [Fact]
         public void HmacMD5_Rfc2202_1()
@@ -70,6 +78,12 @@ namespace System.Security.Cryptography.Hashing.Algorithms.Tests
         public void HmacMD5_Rfc2202_7()
         {
             VerifyHmac(7, "6f630fad67cda0ee1fb1f562db3aa53e");
+        }
+
+        [Fact]
+        public void HMacMD5_Rfc2104_2()
+        {
+            VerifyHmacRfc2104_2();
         }
     }
 }

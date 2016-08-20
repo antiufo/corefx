@@ -1,5 +1,6 @@
-// Copyright (c) Microsoft. All rights reserved.
-// Licensed under the MIT license. See LICENSE file in the project root for full license information.
+// Licensed to the .NET Foundation under one or more agreements.
+// The .NET Foundation licenses this file to you under the MIT license.
+// See the LICENSE file in the project root for more information.
 
 using System.Runtime.InteropServices;
 
@@ -16,6 +17,13 @@ namespace System.IO.Compression
         [StructLayout(LayoutKind.Sequential, CharSet = CharSet.Ansi)]
         internal struct ZStream
         {
+            internal void Init()
+            {
+                zalloc = ZNullPtr;
+                zfree = ZNullPtr;
+                opaque = ZNullPtr;
+            }
+
             internal IntPtr nextIn;     //Bytef    *next_in;  /* next input byte */
             internal uint availIn;      //uInt     avail_in;  /* number of bytes available at next_in */
             internal uint totalIn;      //uLong    total_in;  /* total nb of input bytes read so far */
@@ -36,12 +44,5 @@ namespace System.IO.Compression
             internal uint adler;        //uLong    adler;     /* adler32 value of the uncompressed data */
             internal uint reserved;     //uLong    reserved;  /* reserved for future use */
         }
-
-        /// <summary>Casts a uint to a native zlib uLong.</summary>
-        private static uint CastUInt32ToNativeuLong(uint value)
-        {
-            return value;
-        }
-
     }
 }

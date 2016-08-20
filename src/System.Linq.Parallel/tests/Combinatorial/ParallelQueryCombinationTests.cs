@@ -1,154 +1,117 @@
-// Copyright (c) Microsoft. All rights reserved.
-// Licensed under the MIT license. See LICENSE file in the project root for full license information.
+// Licensed to the .NET Foundation under one or more agreements.
+// The .NET Foundation licenses this file to you under the MIT license.
+// See the LICENSE file in the project root for more information.
 
-using System;
-using System.Linq;
+using System.Collections.Generic;
 using Xunit;
 
-namespace Test
+namespace System.Linq.Parallel.Tests
 {
-    [Trait("category", "outerloop")]
-    public partial class ParallelQueryCombinationTests
+    public static partial class ParallelQueryCombinationTests
     {
         [Theory]
-        [MemberData("UnaryOperators")]
-        [MemberData("BinaryOperators")]
-        public static void Aggregate(LabeledOperation source, LabeledOperation operation)
+        [MemberData(nameof(UnaryOperations))]
+        [MemberData(nameof(BinaryOperations))]
+        public static void Aggregate(Labeled<Operation> operation)
         {
             Assert.Equal(Functions.SumRange(DefaultStart, DefaultSize),
-                operation.Item(DefaultStart, DefaultSize, source.Item).Aggregate((x, y) => x + y));
+                operation.Item(DefaultStart, DefaultSize, DefaultSource).Aggregate((x, y) => x + y));
         }
 
         [Theory]
-        [MemberData("UnaryOperators")]
-        [MemberData("BinaryOperators")]
-        public static void Aggregate_Seed(LabeledOperation source, LabeledOperation operation)
+        [MemberData(nameof(UnaryOperations))]
+        [MemberData(nameof(BinaryOperations))]
+        public static void Aggregate_Seed(Labeled<Operation> operation)
         {
             Assert.Equal(Functions.SumRange(DefaultStart, DefaultSize),
-                operation.Item(DefaultStart, DefaultSize, source.Item).Aggregate(0, (x, y) => x + y));
+                operation.Item(DefaultStart, DefaultSize, DefaultSource).Aggregate(0, (x, y) => x + y));
         }
 
         [Theory]
-        [MemberData("UnaryOperators")]
-        [MemberData("BinaryOperators")]
-        public static void Aggregate_Result(LabeledOperation source, LabeledOperation operation)
+        [MemberData(nameof(UnaryOperations))]
+        [MemberData(nameof(BinaryOperations))]
+        public static void Aggregate_Result(Labeled<Operation> operation)
         {
             Assert.Equal(Functions.SumRange(DefaultStart, DefaultSize),
-                operation.Item(DefaultStart, DefaultSize, source.Item).Aggregate(0, (x, y) => x + y, r => r));
+                operation.Item(DefaultStart, DefaultSize, DefaultSource).Aggregate(0, (x, y) => x + y, r => r));
         }
 
         [Theory]
-        [MemberData("UnaryOperators")]
-        [MemberData("BinaryOperators")]
-        public static void Aggregate_Accumulator(LabeledOperation source, LabeledOperation operation)
+        [MemberData(nameof(UnaryOperations))]
+        [MemberData(nameof(BinaryOperations))]
+        public static void Aggregate_Accumulator(Labeled<Operation> operation)
         {
             Assert.Equal(Functions.SumRange(DefaultStart, DefaultSize),
-                operation.Item(DefaultStart, DefaultSize, source.Item).Aggregate(0, (a, x) => a + x, (l, r) => l + r, r => r));
+                operation.Item(DefaultStart, DefaultSize, DefaultSource).Aggregate(0, (a, x) => a + x, (l, r) => l + r, r => r));
         }
 
         [Theory]
-        [MemberData("UnaryOperators")]
-        [MemberData("BinaryOperators")]
-        public static void Aggregate_SeedFactory(LabeledOperation source, LabeledOperation operation)
+        [MemberData(nameof(UnaryOperations))]
+        [MemberData(nameof(BinaryOperations))]
+        public static void Aggregate_SeedFactory(Labeled<Operation> operation)
         {
             Assert.Equal(Functions.SumRange(DefaultStart, DefaultSize),
-                operation.Item(DefaultStart, DefaultSize, source.Item).Aggregate(() => 0, (a, x) => a + x, (l, r) => l + r, r => r));
+                operation.Item(DefaultStart, DefaultSize, DefaultSource).Aggregate(() => 0, (a, x) => a + x, (l, r) => l + r, r => r));
         }
 
         [Theory]
-        [MemberData("UnaryFailingOperators")]
-        [MemberData("BinaryFailingOperators")]
-        public static void Aggregate_AggregateException(LabeledOperation source, LabeledOperation operation)
+        [MemberData(nameof(UnaryOperations))]
+        [MemberData(nameof(BinaryOperations))]
+        public static void All_False(Labeled<Operation> operation)
         {
-            Functions.AssertThrowsWrapped<DeliberateTestException>(() => operation.Item(DefaultStart, DefaultSize, source.Item).Aggregate((x, y) => x));
-            Functions.AssertThrowsWrapped<DeliberateTestException>(() => operation.Item(DefaultStart, DefaultSize, source.Item).Aggregate(0, (x, y) => x + y));
-            Functions.AssertThrowsWrapped<DeliberateTestException>(() => operation.Item(DefaultStart, DefaultSize, source.Item).Aggregate(0, (x, y) => x + y, r => r));
-            Functions.AssertThrowsWrapped<DeliberateTestException>(() => operation.Item(DefaultStart, DefaultSize, source.Item).Aggregate(0, (a, x) => a + x, (l, r) => l + r, r => r));
-            Functions.AssertThrowsWrapped<DeliberateTestException>(() => operation.Item(DefaultStart, DefaultSize, source.Item).Aggregate(() => 0, (a, x) => a + x, (l, r) => l + r, r => r));
+            Assert.False(operation.Item(DefaultStart, DefaultSize, DefaultSource).All(x => false));
         }
 
         [Theory]
-        [MemberData("UnaryOperators")]
-        [MemberData("BinaryOperators")]
-        public static void All_False(LabeledOperation source, LabeledOperation operation)
-        {
-            Assert.False(operation.Item(DefaultStart, DefaultSize, source.Item).All(x => false));
-        }
-
-        [Theory]
-        [MemberData("UnaryOperators")]
-        [MemberData("BinaryOperators")]
-        public static void All_True(LabeledOperation source, LabeledOperation operation)
+        [MemberData(nameof(UnaryOperations))]
+        [MemberData(nameof(BinaryOperations))]
+        public static void All_True(Labeled<Operation> operation)
         {
             IntegerRangeSet seen = new IntegerRangeSet(DefaultStart, DefaultSize);
-            Assert.True(operation.Item(DefaultStart, DefaultSize, source.Item).All(x => seen.Add(x)));
+            Assert.True(operation.Item(DefaultStart, DefaultSize, DefaultSource).All(x => seen.Add(x)));
             seen.AssertComplete();
         }
 
         [Theory]
-        [MemberData("UnaryFailingOperators")]
-        [MemberData("BinaryFailingOperators")]
-        public static void All_AggregateException(LabeledOperation source, LabeledOperation operation)
-        {
-            Functions.AssertThrowsWrapped<DeliberateTestException>(() => operation.Item(DefaultStart, DefaultSize, source.Item).All(x => true));
-        }
-
-        [Theory]
-        [MemberData("UnaryOperators")]
-        [MemberData("BinaryOperators")]
-        public static void Any_False(LabeledOperation source, LabeledOperation operation)
+        [MemberData(nameof(UnaryOperations))]
+        [MemberData(nameof(BinaryOperations))]
+        public static void Any_False(Labeled<Operation> operation)
         {
             IntegerRangeSet seen = new IntegerRangeSet(DefaultStart, DefaultSize);
-            Assert.False(operation.Item(DefaultStart, DefaultSize, source.Item).Any(x => !seen.Add(x)));
+            Assert.False(operation.Item(DefaultStart, DefaultSize, DefaultSource).Any(x => !seen.Add(x)));
             seen.AssertComplete();
         }
 
         [Theory]
-        [MemberData("UnaryOperators")]
-        [MemberData("BinaryOperators")]
-        public static void Any_True(LabeledOperation source, LabeledOperation operation)
+        [MemberData(nameof(UnaryOperations))]
+        [MemberData(nameof(BinaryOperations))]
+        public static void Any_True(Labeled<Operation> operation)
         {
-            Assert.True(operation.Item(DefaultStart, DefaultSize, source.Item).Any(x => true));
+            Assert.True(operation.Item(DefaultStart, DefaultSize, DefaultSource).Any(x => true));
         }
 
         [Theory]
-        [MemberData("UnaryFailingOperators")]
-        [MemberData("BinaryFailingOperators")]
-        public static void Any_AggregateException(LabeledOperation source, LabeledOperation operation)
-        {
-            Functions.AssertThrowsWrapped<DeliberateTestException>(() => operation.Item(DefaultStart, DefaultSize, source.Item).Any(x => false));
-        }
-
-        [Theory]
-        [MemberData("UnaryOperators")]
-        [MemberData("BinaryOperators")]
-        public static void Average(LabeledOperation source, LabeledOperation operation)
+        [MemberData(nameof(UnaryOperations))]
+        [MemberData(nameof(BinaryOperations))]
+        public static void Average(Labeled<Operation> operation)
         {
             Assert.Equal(Functions.SumRange(DefaultStart, DefaultSize) / (double)DefaultSize,
-                operation.Item(DefaultStart, DefaultSize, source.Item).Average());
+                operation.Item(DefaultStart, DefaultSize, DefaultSource).Average());
         }
 
         [Theory]
-        [MemberData("UnaryOperators")]
-        [MemberData("BinaryOperators")]
-        public static void Average_Nullable(LabeledOperation source, LabeledOperation operation)
+        [MemberData(nameof(UnaryOperations))]
+        [MemberData(nameof(BinaryOperations))]
+        public static void Average_Nullable(Labeled<Operation> operation)
         {
             Assert.Equal(Functions.SumRange(DefaultStart, DefaultSize) / (double?)DefaultSize,
-                operation.Item(DefaultStart, DefaultSize, source.Item).Average(x => (int?)x));
+                operation.Item(DefaultStart, DefaultSize, DefaultSource).Average(x => (int?)x));
         }
 
         [Theory]
-        [MemberData("UnaryFailingOperators")]
-        [MemberData("BinaryFailingOperators")]
-        public static void Average_AggregateException(LabeledOperation source, LabeledOperation operation)
-        {
-            Functions.AssertThrowsWrapped<DeliberateTestException>(() => operation.Item(DefaultStart, DefaultSize, source.Item).Average());
-        }
-
-        [Theory]
-        [MemberData("UnaryOperators")]
-        [MemberData("BinaryOperators")]
-        public static void Cast(LabeledOperation source, LabeledOperation operation)
+        [MemberData(nameof(UnaryOperators))]
+        [MemberData(nameof(BinaryOperators))]
+        public static void Cast(Labeled<Operation> source, Labeled<Operation> operation)
         {
             int seen = DefaultStart;
             foreach (int? i in operation.Item(DefaultStart, DefaultSize, source.Item).Cast<int?>())
@@ -160,9 +123,9 @@ namespace Test
         }
 
         [Theory]
-        [MemberData("UnaryOperators")]
-        [MemberData("BinaryOperators")]
-        public static void Cast_NotPipelined(LabeledOperation source, LabeledOperation operation)
+        [MemberData(nameof(UnaryOperators))]
+        [MemberData(nameof(BinaryOperators))]
+        public static void Cast_NotPipelined(Labeled<Operation> source, Labeled<Operation> operation)
         {
             int seen = DefaultStart;
             Assert.All(operation.Item(DefaultStart, DefaultSize, source.Item).Cast<int?>().ToList(), x => Assert.Equal(seen++, x));
@@ -170,66 +133,77 @@ namespace Test
         }
 
         [Theory]
-        [MemberData("UnaryOperators")]
-        [MemberData("BinaryOperators")]
-        public static void Contains_True(LabeledOperation source, LabeledOperation operation)
+        [MemberData(nameof(UnaryOperators))]
+        [MemberData(nameof(BinaryOperators))]
+        public static void Concat(Labeled<Operation> source, Labeled<Operation> operation)
         {
-            Assert.True(operation.Item(DefaultStart, DefaultSize, source.Item).Contains(DefaultStart + DefaultSize / 2));
+            int seen = DefaultStart;
+            foreach (int i in operation.Item(DefaultStart, DefaultSize / 2, source.Item)
+                .Concat(operation.Item(DefaultStart + DefaultSize / 2, DefaultSize / 2, source.Item)))
+            {
+                Assert.Equal(seen++, i);
+            }
+            Assert.Equal(DefaultStart + DefaultSize, seen);
         }
 
         [Theory]
-        [MemberData("UnaryOperators")]
-        [MemberData("BinaryOperators")]
-        public static void Contains_False(LabeledOperation source, LabeledOperation operation)
+        [MemberData(nameof(UnaryOperators))]
+        [MemberData(nameof(BinaryOperators))]
+        public static void Concat_NotPipelined(Labeled<Operation> source, Labeled<Operation> operation)
         {
-            Assert.False(operation.Item(DefaultStart, DefaultSize, source.Item).Contains(DefaultStart + DefaultSize));
+            int seen = DefaultStart;
+            Assert.All(
+                operation.Item(DefaultStart, DefaultSize / 2, source.Item)
+                    .Concat(operation.Item(DefaultStart + DefaultSize / 2, DefaultSize / 2, source.Item)).ToList(),
+                x => Assert.Equal(seen++, x)
+                );
+            Assert.Equal(DefaultStart + DefaultSize, seen);
         }
 
         [Theory]
-        [MemberData("UnaryFailingOperators")]
-        [MemberData("BinaryFailingOperators")]
-        public static void Contains_AggregateException(LabeledOperation source, LabeledOperation operation)
+        [MemberData(nameof(UnaryOperations))]
+        [MemberData(nameof(BinaryOperations))]
+        public static void Contains_True(Labeled<Operation> operation)
         {
-            Functions.AssertThrowsWrapped<DeliberateTestException>(() => operation.Item(DefaultStart, DefaultSize, source.Item).Contains(DefaultStart + DefaultSize));
+            Assert.True(operation.Item(DefaultStart, DefaultSize, DefaultSource).Contains(DefaultStart + DefaultSize / 2));
         }
 
         [Theory]
-        [MemberData("UnaryOperators")]
-        [MemberData("BinaryOperators")]
-        public static void Count_Elements(LabeledOperation source, LabeledOperation operation)
+        [MemberData(nameof(UnaryOperations))]
+        [MemberData(nameof(BinaryOperations))]
+        public static void Contains_False(Labeled<Operation> operation)
         {
-            Assert.Equal(DefaultSize, operation.Item(DefaultStart, DefaultSize, source.Item).Count());
+            Assert.False(operation.Item(DefaultStart, DefaultSize, DefaultSource).Contains(DefaultStart + DefaultSize));
         }
 
         [Theory]
-        [MemberData("UnaryOperators")]
-        [MemberData("BinaryOperators")]
-        public static void Count_Predicate_Some(LabeledOperation source, LabeledOperation operation)
+        [MemberData(nameof(UnaryOperations))]
+        [MemberData(nameof(BinaryOperations))]
+        public static void Count_Elements(Labeled<Operation> operation)
         {
-            Assert.Equal(DefaultSize / 2, operation.Item(DefaultStart, DefaultSize, source.Item).Count(x => x < DefaultStart + DefaultSize / 2));
+            Assert.Equal(DefaultSize, operation.Item(DefaultStart, DefaultSize, DefaultSource).Count());
         }
 
         [Theory]
-        [MemberData("UnaryOperators")]
-        [MemberData("BinaryOperators")]
-        public static void Count_Predicate_None(LabeledOperation source, LabeledOperation operation)
+        [MemberData(nameof(UnaryOperations))]
+        [MemberData(nameof(BinaryOperations))]
+        public static void Count_Predicate_Some(Labeled<Operation> operation)
         {
-            Assert.Equal(0, operation.Item(DefaultStart, DefaultSize, source.Item).Count(x => x < DefaultStart));
+            Assert.Equal(DefaultSize / 2, operation.Item(DefaultStart, DefaultSize, DefaultSource).Count(x => x < DefaultStart + DefaultSize / 2));
         }
 
         [Theory]
-        [MemberData("UnaryFailingOperators")]
-        [MemberData("BinaryFailingOperators")]
-        public static void Count_AggregateException(LabeledOperation source, LabeledOperation operation)
+        [MemberData(nameof(UnaryOperations))]
+        [MemberData(nameof(BinaryOperations))]
+        public static void Count_Predicate_None(Labeled<Operation> operation)
         {
-            Functions.AssertThrowsWrapped<DeliberateTestException>(() => operation.Item(DefaultStart, DefaultSize, source.Item).Count());
-            Functions.AssertThrowsWrapped<DeliberateTestException>(() => operation.Item(DefaultStart, DefaultSize, source.Item).Count(x => true));
+            Assert.Equal(0, operation.Item(DefaultStart, DefaultSize, DefaultSource).Count(x => x < DefaultStart));
         }
 
         [Theory]
-        [MemberData("UnaryOperators")]
-        [MemberData("BinaryOperators")]
-        public static void DefaultIfEmpty(LabeledOperation source, LabeledOperation operation)
+        [MemberData(nameof(UnaryOperators))]
+        [MemberData(nameof(BinaryOperators))]
+        public static void DefaultIfEmpty(Labeled<Operation> source, Labeled<Operation> operation)
         {
             int seen = DefaultStart;
             foreach (int i in operation.Item(DefaultStart, DefaultSize, source.Item).DefaultIfEmpty())
@@ -240,9 +214,9 @@ namespace Test
         }
 
         [Theory]
-        [MemberData("UnaryOperators")]
-        [MemberData("BinaryOperators")]
-        public static void DefaultIfEmpty_NotPipelined(LabeledOperation source, LabeledOperation operation)
+        [MemberData(nameof(UnaryOperators))]
+        [MemberData(nameof(BinaryOperators))]
+        public static void DefaultIfEmpty_NotPipelined(Labeled<Operation> source, Labeled<Operation> operation)
         {
             int seen = DefaultStart;
             Assert.All(operation.Item(DefaultStart, DefaultSize, source.Item).DefaultIfEmpty().ToList(), x => Assert.Equal(seen++, x));
@@ -250,9 +224,9 @@ namespace Test
         }
 
         [Theory]
-        [MemberData("UnaryOperators")]
-        [MemberData("BinaryOperators")]
-        public static void Distinct(LabeledOperation source, LabeledOperation operation)
+        [MemberData(nameof(UnaryOperators))]
+        [MemberData(nameof(BinaryOperators))]
+        public static void Distinct(Labeled<Operation> source, Labeled<Operation> operation)
         {
             int seen = DefaultStart;
             ParallelQuery<int> query = operation.Item(DefaultStart * 2, DefaultSize * 2, source.Item).Select(x => x / 2).Distinct();
@@ -264,9 +238,9 @@ namespace Test
         }
 
         [Theory]
-        [MemberData("UnaryOperators")]
-        [MemberData("BinaryOperators")]
-        public static void Distinct_NotPipelined(LabeledOperation source, LabeledOperation operation)
+        [MemberData(nameof(UnaryOperators))]
+        [MemberData(nameof(BinaryOperators))]
+        public static void Distinct_NotPipelined(Labeled<Operation> source, Labeled<Operation> operation)
         {
             int seen = DefaultStart;
             ParallelQuery<int> query = operation.Item(DefaultStart * 2, DefaultSize * 2, source.Item).Select(x => x / 2).Distinct();
@@ -275,9 +249,9 @@ namespace Test
         }
 
         [Theory]
-        [MemberData("UnaryOperators")]
-        [MemberData("BinaryOperators")]
-        public static void ElementAt(LabeledOperation source, LabeledOperation operation)
+        [MemberData(nameof(UnaryOperators))]
+        [MemberData(nameof(BinaryOperators))]
+        public static void ElementAt(Labeled<Operation> source, Labeled<Operation> operation)
         {
             ParallelQuery<int> query = operation.Item(DefaultStart, DefaultSize, source.Item);
 
@@ -290,18 +264,9 @@ namespace Test
         }
 
         [Theory]
-        [MemberData("UnaryFailingOperators")]
-        [MemberData("BinaryFailingOperators")]
-        [MemberData("OrderFailingOperators")]
-        public static void ElementAt_AggregateException(LabeledOperation source, LabeledOperation operation)
-        {
-            Functions.AssertThrowsWrapped<DeliberateTestException>(() => operation.Item(DefaultStart, DefaultSize, source.Item).ElementAt(DefaultSize - 1));
-        }
-
-        [Theory]
-        [MemberData("UnaryOperators")]
-        [MemberData("BinaryOperators")]
-        public static void ElementAtOrDefault(LabeledOperation source, LabeledOperation operation)
+        [MemberData(nameof(UnaryOperators))]
+        [MemberData(nameof(BinaryOperators))]
+        public static void ElementAtOrDefault(Labeled<Operation> source, Labeled<Operation> operation)
         {
             ParallelQuery<int> query = operation.Item(DefaultStart, DefaultSize, source.Item);
 
@@ -315,19 +280,9 @@ namespace Test
         }
 
         [Theory]
-        [MemberData("UnaryFailingOperators")]
-        [MemberData("BinaryFailingOperators")]
-        [MemberData("OrderFailingOperators")]
-        public static void ElementAtOrDefault_AggregateException(LabeledOperation source, LabeledOperation operation)
-        {
-            Functions.AssertThrowsWrapped<DeliberateTestException>(() => operation.Item(DefaultStart, DefaultSize, source.Item).ElementAtOrDefault(DefaultSize - 1));
-            Functions.AssertThrowsWrapped<DeliberateTestException>(() => operation.Item(DefaultStart, DefaultSize, source.Item).ElementAtOrDefault(DefaultSize + 1));
-        }
-
-        [Theory]
-        [MemberData("UnaryOperators")]
-        [MemberData("BinaryOperators")]
-        public static void Except(LabeledOperation source, LabeledOperation operation)
+        [MemberData(nameof(UnaryOperators))]
+        [MemberData(nameof(BinaryOperators))]
+        public static void Except(Labeled<Operation> source, Labeled<Operation> operation)
         {
             int seen = DefaultStart;
             ParallelQuery<int> query = operation.Item(DefaultStart, DefaultSize + DefaultSize / 2, source.Item)
@@ -340,9 +295,9 @@ namespace Test
         }
 
         [Theory]
-        [MemberData("UnaryOperators")]
-        [MemberData("BinaryOperators")]
-        public static void Except_NotPipelined(LabeledOperation source, LabeledOperation operation)
+        [MemberData(nameof(UnaryOperators))]
+        [MemberData(nameof(BinaryOperators))]
+        public static void Except_NotPipelined(Labeled<Operation> source, Labeled<Operation> operation)
         {
             int seen = DefaultStart;
             ParallelQuery<int> query = operation.Item(DefaultStart, DefaultSize + DefaultSize / 2, source.Item)
@@ -352,97 +307,49 @@ namespace Test
         }
 
         [Theory]
-        [MemberData("UnaryOperators")]
-        [MemberData("BinaryOperators")]
-        public static void First(LabeledOperation source, LabeledOperation operation)
+        [MemberData(nameof(UnaryOperators))]
+        [MemberData(nameof(BinaryOperators))]
+        public static void First(Labeled<Operation> source, Labeled<Operation> operation)
         {
             Assert.Equal(DefaultStart, operation.Item(DefaultStart, DefaultSize, source.Item).First());
         }
 
         [Theory]
-        [MemberData("UnaryOperators")]
-        [MemberData("BinaryOperators")]
-        public static void First_Predicate(LabeledOperation source, LabeledOperation operation)
+        [MemberData(nameof(UnaryOperators))]
+        [MemberData(nameof(BinaryOperators))]
+        public static void First_Predicate(Labeled<Operation> source, Labeled<Operation> operation)
         {
             Assert.Equal(DefaultStart + DefaultSize / 2, operation.Item(DefaultStart, DefaultSize, source.Item).First(x => x >= DefaultStart + DefaultSize / 2));
         }
 
         [Theory]
-        [MemberData("UnaryOperators")]
-        [MemberData("BinaryOperators")]
-        public static void First_Predicate_None(LabeledOperation source, LabeledOperation operation)
-        {
-            Assert.Throws<InvalidOperationException>(() => operation.Item(DefaultStart, DefaultSize, source.Item).First(x => false));
-        }
-
-        [Theory]
-        [MemberData("UnaryFailingOperators")]
-        [MemberData("BinaryFailingOperators")]
-        [MemberData("OrderFailingOperators")]
-        public static void First_AggregateException(LabeledOperation source, LabeledOperation operation)
-        {
-            // Concat seems able to return the first element when the left query does not fail ("first" query).
-            // This test might be flaky in the case that it decides to run the right query too...
-            if (operation.ToString().Contains("Concat-Left"))
-            {
-                Assert.InRange(operation.Item(DefaultStart, DefaultSize, source.Item).First(), DefaultStart, DefaultStart + DefaultSize);
-            }
-            else
-            {
-                Functions.AssertThrowsWrapped<DeliberateTestException>(() => operation.Item(DefaultStart, DefaultSize, source.Item).First());
-            }
-
-            Functions.AssertThrowsWrapped<DeliberateTestException>(() => operation.Item(DefaultStart, DefaultSize, source.Item).First(x => false));
-        }
-
-        [Theory]
-        [MemberData("UnaryOperators")]
-        [MemberData("BinaryOperators")]
-        public static void FirstOrDefault(LabeledOperation source, LabeledOperation operation)
+        [MemberData(nameof(UnaryOperators))]
+        [MemberData(nameof(BinaryOperators))]
+        public static void FirstOrDefault(Labeled<Operation> source, Labeled<Operation> operation)
         {
             Assert.Equal(DefaultStart, operation.Item(DefaultStart, DefaultSize, source.Item).FirstOrDefault());
         }
 
         [Theory]
-        [MemberData("UnaryOperators")]
-        [MemberData("BinaryOperators")]
-        public static void FirstOrDefault_Predicate(LabeledOperation source, LabeledOperation operation)
+        [MemberData(nameof(UnaryOperators))]
+        [MemberData(nameof(BinaryOperators))]
+        public static void FirstOrDefault_Predicate(Labeled<Operation> source, Labeled<Operation> operation)
         {
             Assert.Equal(DefaultStart + DefaultSize / 2, operation.Item(DefaultStart, DefaultSize, source.Item).FirstOrDefault(x => x >= DefaultStart + DefaultSize / 2));
         }
 
         [Theory]
-        [MemberData("UnaryOperators")]
-        [MemberData("BinaryOperators")]
-        public static void FirstOrDefault_Predicate_None(LabeledOperation source, LabeledOperation operation)
+        [MemberData(nameof(UnaryOperators))]
+        [MemberData(nameof(BinaryOperators))]
+        public static void FirstOrDefault_Predicate_None(Labeled<Operation> source, Labeled<Operation> operation)
         {
             Assert.Equal(default(int), operation.Item(DefaultStart, DefaultSize, source.Item).FirstOrDefault(x => false));
         }
 
         [Theory]
-        [MemberData("UnaryFailingOperators")]
-        [MemberData("BinaryFailingOperators")]
-        [MemberData("OrderFailingOperators")]
-        public static void FirstOrDefault_AggregateException(LabeledOperation source, LabeledOperation operation)
-        {
-            // Concat seems able to return the first element when the left query does not fail ("first" query).
-            // This test might be flaky in the case that it decides to run the right query too...
-            if (operation.ToString().Contains("Concat-Left"))
-            {
-                Assert.InRange(operation.Item(DefaultStart, DefaultSize, source.Item).FirstOrDefault(), DefaultStart, DefaultStart + DefaultSize);
-            }
-            else
-            {
-                Functions.AssertThrowsWrapped<DeliberateTestException>(() => operation.Item(DefaultStart, DefaultSize, source.Item).FirstOrDefault());
-            }
-
-            Functions.AssertThrowsWrapped<DeliberateTestException>(() => operation.Item(DefaultStart, DefaultSize, source.Item).FirstOrDefault(x => false));
-        }
-
-        [Theory]
-        [MemberData("UnaryOperators")]
-        [MemberData("BinaryOperators")]
-        public static void ForAll(LabeledOperation source, LabeledOperation operation)
+        [MemberData(nameof(UnaryOperators))]
+        [MemberData(nameof(BinaryOperators))]
+        public static void ForAll(Labeled<Operation> source, Labeled<Operation> operation)
         {
             IntegerRangeSet seen = new IntegerRangeSet(DefaultStart, DefaultSize);
             operation.Item(DefaultStart, DefaultSize, source.Item).ForAll(x => seen.Add(x));
@@ -450,17 +357,28 @@ namespace Test
         }
 
         [Theory]
-        [MemberData("UnaryFailingOperators")]
-        [MemberData("BinaryFailingOperators")]
-        public static void ForAll_AggregateException(LabeledOperation source, LabeledOperation operation)
+        [MemberData(nameof(UnaryOperators))]
+        [MemberData(nameof(BinaryOperators))]
+        public static void GetEnumerator(Labeled<Operation> source, Labeled<Operation> operation)
         {
-            Functions.AssertThrowsWrapped<DeliberateTestException>(() => operation.Item(DefaultStart, DefaultSize, source.Item).ForAll(x => { }));
+            int seen = DefaultStart;
+            IEnumerator<int> enumerator = operation.Item(DefaultStart, DefaultSize, source.Item).GetEnumerator();
+
+            while (enumerator.MoveNext())
+            {
+                int current = enumerator.Current;
+                Assert.Equal(seen++, current);
+                Assert.Equal(current, enumerator.Current);
+            }
+            Assert.Equal(DefaultStart + DefaultSize, seen);
+
+            Assert.Throws<NotSupportedException>(() => enumerator.Reset());
         }
 
         [Theory]
-        [MemberData("UnaryOperators")]
-        [MemberData("BinaryOperators")]
-        public static void GroupBy(LabeledOperation source, LabeledOperation operation)
+        [MemberData(nameof(UnaryOperators))]
+        [MemberData(nameof(BinaryOperators))]
+        public static void GroupBy(Labeled<Operation> source, Labeled<Operation> operation)
         {
             int seenKey = DefaultStart / GroupFactor;
             foreach (IGrouping<int, int> group in operation.Item(DefaultStart, DefaultSize, source.Item).GroupBy(x => x / GroupFactor))
@@ -474,9 +392,9 @@ namespace Test
         }
 
         [Theory]
-        [MemberData("UnaryOperators")]
-        [MemberData("BinaryOperators")]
-        public static void GroupBy_NotPipelined(LabeledOperation source, LabeledOperation operation)
+        [MemberData(nameof(UnaryOperators))]
+        [MemberData(nameof(BinaryOperators))]
+        public static void GroupBy_NotPipelined(Labeled<Operation> source, Labeled<Operation> operation)
         {
             int seenKey = DefaultStart / GroupFactor;
             foreach (IGrouping<int, int> group in operation.Item(DefaultStart, DefaultSize, source.Item).GroupBy(x => x / GroupFactor).ToList())
@@ -490,9 +408,9 @@ namespace Test
         }
 
         [Theory]
-        [MemberData("UnaryOperators")]
-        [MemberData("BinaryOperators")]
-        public static void GroupBy_ElementSelector(LabeledOperation source, LabeledOperation operation)
+        [MemberData(nameof(UnaryOperators))]
+        [MemberData(nameof(BinaryOperators))]
+        public static void GroupBy_ElementSelector(Labeled<Operation> source, Labeled<Operation> operation)
         {
             int seenKey = DefaultStart / GroupFactor;
             foreach (IGrouping<int, int> group in operation.Item(DefaultStart, DefaultSize, source.Item).GroupBy(x => x / GroupFactor, y => -y))
@@ -506,9 +424,9 @@ namespace Test
         }
 
         [Theory]
-        [MemberData("UnaryOperators")]
-        [MemberData("BinaryOperators")]
-        public static void GroupBy_ElementSelector_NotPipelined(LabeledOperation source, LabeledOperation operation)
+        [MemberData(nameof(UnaryOperators))]
+        [MemberData(nameof(BinaryOperators))]
+        public static void GroupBy_ElementSelector_NotPipelined(Labeled<Operation> source, Labeled<Operation> operation)
         {
             int seenKey = DefaultStart / GroupFactor;
             foreach (IGrouping<int, int> group in operation.Item(DefaultStart, DefaultSize, source.Item).GroupBy(x => x / GroupFactor, y => -y).ToList())
@@ -522,9 +440,45 @@ namespace Test
         }
 
         [Theory]
-        [MemberData("UnaryOperators")]
-        [MemberData("BinaryOperators")]
-        public static void Intersect(LabeledOperation source, LabeledOperation operation)
+        [ActiveIssue(1155)]
+        [MemberData(nameof(UnaryOperators))]
+        [MemberData(nameof(BinaryOperators))]
+        public static void GroupJoin(Labeled<Operation> source, Labeled<Operation> operation)
+        {
+            int seenKey = DefaultStart / GroupFactor;
+            foreach (KeyValuePair<int, IEnumerable<int>> group in operation.Item(DefaultStart / GroupFactor, DefaultSize / GroupFactor, source.Item)
+                .GroupJoin(operation.Item(DefaultStart, DefaultSize, source.Item), x => x, y => y / GroupFactor, (k, g) => new KeyValuePair<int, IEnumerable<int>>(k, g)))
+            {
+                Assert.Equal(seenKey++, group.Key);
+                int seenElement = group.Key * GroupFactor;
+                Assert.All(group.Value, x => Assert.Equal(seenElement++, x));
+                Assert.Equal((group.Key + 1) * GroupFactor, seenElement);
+            }
+            Assert.Equal((DefaultStart + DefaultSize) / GroupFactor, seenKey);
+        }
+
+        [Theory]
+        [ActiveIssue(1155)]
+        [MemberData(nameof(UnaryOperators))]
+        [MemberData(nameof(BinaryOperators))]
+        public static void GroupJoin_NotPipelined(Labeled<Operation> source, Labeled<Operation> operation)
+        {
+            int seenKey = DefaultStart / GroupFactor;
+            foreach (KeyValuePair<int, IEnumerable<int>> group in operation.Item(DefaultStart / GroupFactor, DefaultSize / GroupFactor, source.Item)
+                .GroupJoin(operation.Item(DefaultStart, DefaultSize, source.Item), x => x, y => y / GroupFactor, (k, g) => new KeyValuePair<int, IEnumerable<int>>(k, g)).ToList())
+            {
+                Assert.Equal(seenKey++, group.Key);
+                int seenElement = group.Key * GroupFactor;
+                Assert.All(group.Value, x => Assert.Equal(seenElement++, x));
+                Assert.Equal((group.Key + 1) * GroupFactor, seenElement);
+            }
+            Assert.Equal((DefaultStart + DefaultSize) / GroupFactor, seenKey);
+        }
+
+        [Theory]
+        [MemberData(nameof(UnaryOperators))]
+        [MemberData(nameof(BinaryOperators))]
+        public static void Intersect(Labeled<Operation> source, Labeled<Operation> operation)
         {
             int seen = DefaultStart;
             ParallelQuery<int> query = operation.Item(DefaultStart - DefaultSize / 2, DefaultSize + DefaultSize / 2, source.Item)
@@ -537,9 +491,9 @@ namespace Test
         }
 
         [Theory]
-        [MemberData("UnaryOperators")]
-        [MemberData("BinaryOperators")]
-        public static void Intersect_NotPipelined(LabeledOperation source, LabeledOperation operation)
+        [MemberData(nameof(UnaryOperators))]
+        [MemberData(nameof(BinaryOperators))]
+        public static void Intersect_NotPipelined(Labeled<Operation> source, Labeled<Operation> operation)
         {
             int seen = DefaultStart;
             ParallelQuery<int> query = operation.Item(DefaultStart - DefaultSize / 2, DefaultSize + DefaultSize / 2, source.Item)
@@ -549,158 +503,139 @@ namespace Test
         }
 
         [Theory]
-        [MemberData("UnaryOperators")]
-        [MemberData("BinaryOperators")]
-        public static void Last(LabeledOperation source, LabeledOperation operation)
+        [ActiveIssue(1155)]
+        [MemberData(nameof(UnaryOperators))]
+        [MemberData(nameof(BinaryOperators))]
+        public static void Join(Labeled<Operation> source, Labeled<Operation> operation)
+        {
+            int seen = DefaultStart;
+            ParallelQuery<KeyValuePair<int, int>> query = operation.Item(DefaultStart / GroupFactor, DefaultSize / GroupFactor, source.Item)
+                  .Join(operation.Item(DefaultStart, DefaultSize, source.Item), x => x, y => y / GroupFactor, (x, y) => new KeyValuePair<int, int>(x, y));
+            foreach (KeyValuePair<int, int> p in query)
+            {
+                Assert.Equal(seen++, p.Value);
+                Assert.Equal(p.Key, p.Value / GroupFactor);
+            }
+            Assert.Equal(DefaultStart + DefaultSize, seen);
+        }
+
+        [Theory]
+        [ActiveIssue(1155)]
+        [MemberData(nameof(UnaryOperators))]
+        [MemberData(nameof(BinaryOperators))]
+        public static void Join_NotPipelined(Labeled<Operation> source, Labeled<Operation> operation)
+        {
+            int seen = DefaultStart;
+            ParallelQuery<KeyValuePair<int, int>> query = operation.Item(DefaultStart / GroupFactor, DefaultSize / GroupFactor, source.Item)
+                 .Join(operation.Item(DefaultStart, DefaultSize, source.Item), x => x, y => y / GroupFactor, (x, y) => new KeyValuePair<int, int>(x, y));
+            foreach (KeyValuePair<int, int> p in query.ToList())
+            {
+                Assert.Equal(seen++, p.Value);
+                Assert.Equal(p.Key, p.Value / GroupFactor);
+            }
+            Assert.Equal(DefaultStart + DefaultSize, seen);
+        }
+
+        [Theory]
+        [MemberData(nameof(UnaryOperators))]
+        [MemberData(nameof(BinaryOperators))]
+        public static void Last(Labeled<Operation> source, Labeled<Operation> operation)
         {
             Assert.Equal(DefaultStart + DefaultSize - 1, operation.Item(DefaultStart, DefaultSize, source.Item).Last());
         }
 
         [Theory]
-        [MemberData("UnaryOperators")]
-        [MemberData("BinaryOperators")]
-        public static void Last_Predicate(LabeledOperation source, LabeledOperation operation)
+        [MemberData(nameof(UnaryOperators))]
+        [MemberData(nameof(BinaryOperators))]
+        public static void Last_Predicate(Labeled<Operation> source, Labeled<Operation> operation)
         {
             Assert.Equal(DefaultStart + DefaultSize / 2 - 1, operation.Item(DefaultStart, DefaultSize, source.Item).Last(x => x < DefaultStart + DefaultSize / 2));
         }
 
         [Theory]
-        [MemberData("UnaryOperators")]
-        [MemberData("BinaryOperators")]
-        public static void Last_Predicate_None(LabeledOperation source, LabeledOperation operation)
-        {
-            Assert.Throws<InvalidOperationException>(() => operation.Item(DefaultStart, DefaultSize, source.Item).Last(x => false));
-        }
-
-        [Theory]
-        [MemberData("UnaryFailingOperators")]
-        [MemberData("BinaryFailingOperators")]
-        [MemberData("OrderFailingOperators")]
-        public static void Last_AggregateException(LabeledOperation source, LabeledOperation operation)
-        {
-            Functions.AssertThrowsWrapped<DeliberateTestException>(() => operation.Item(DefaultStart, DefaultSize, source.Item).Last());
-            Functions.AssertThrowsWrapped<DeliberateTestException>(() => operation.Item(DefaultStart, DefaultSize, source.Item).Last(x => true));
-        }
-
-        [Theory]
-        [MemberData("UnaryOperators")]
-        [MemberData("BinaryOperators")]
-        public static void LastOrDefault(LabeledOperation source, LabeledOperation operation)
+        [MemberData(nameof(UnaryOperators))]
+        [MemberData(nameof(BinaryOperators))]
+        public static void LastOrDefault(Labeled<Operation> source, Labeled<Operation> operation)
         {
             Assert.Equal(DefaultStart + DefaultSize - 1, operation.Item(DefaultStart, DefaultSize, source.Item).LastOrDefault());
         }
 
         [Theory]
-        [MemberData("UnaryOperators")]
-        [MemberData("BinaryOperators")]
-        public static void LastOrDefault_Predicate(LabeledOperation source, LabeledOperation operation)
+        [MemberData(nameof(UnaryOperators))]
+        [MemberData(nameof(BinaryOperators))]
+        public static void LastOrDefault_Predicate(Labeled<Operation> source, Labeled<Operation> operation)
         {
             Assert.Equal(DefaultStart + DefaultSize / 2 - 1, operation.Item(DefaultStart, DefaultSize, source.Item).LastOrDefault(x => x < DefaultStart + DefaultSize / 2));
         }
 
         [Theory]
-        [MemberData("UnaryOperators")]
-        [MemberData("BinaryOperators")]
-        public static void LastOrDefault_Predicate_None(LabeledOperation source, LabeledOperation operation)
+        [MemberData(nameof(UnaryOperators))]
+        [MemberData(nameof(BinaryOperators))]
+        public static void LastOrDefault_Predicate_None(Labeled<Operation> source, Labeled<Operation> operation)
         {
             Assert.Equal(default(int), operation.Item(DefaultStart, DefaultSize, source.Item).LastOrDefault(x => false));
         }
 
         [Theory]
-        [MemberData("UnaryFailingOperators")]
-        [MemberData("BinaryFailingOperators")]
-        [MemberData("OrderFailingOperators")]
-        public static void LastOrDefault_AggregateException(LabeledOperation source, LabeledOperation operation)
+        [MemberData(nameof(UnaryOperations))]
+        [MemberData(nameof(BinaryOperations))]
+        public static void LongCount_Elements(Labeled<Operation> operation)
         {
-            Functions.AssertThrowsWrapped<DeliberateTestException>(() => operation.Item(DefaultStart, DefaultSize, source.Item).LastOrDefault());
-            Functions.AssertThrowsWrapped<DeliberateTestException>(() => operation.Item(DefaultStart, DefaultSize, source.Item).LastOrDefault(x => true));
+            Assert.Equal(DefaultSize, operation.Item(DefaultStart, DefaultSize, DefaultSource).LongCount());
         }
 
         [Theory]
-        [MemberData("UnaryOperators")]
-        [MemberData("BinaryOperators")]
-        public static void LongCount_Elements(LabeledOperation source, LabeledOperation operation)
+        [MemberData(nameof(UnaryOperations))]
+        [MemberData(nameof(BinaryOperations))]
+        public static void LongCount_Predicate_Some(Labeled<Operation> operation)
         {
-            Assert.Equal(DefaultSize, operation.Item(DefaultStart, DefaultSize, source.Item).LongCount());
+            Assert.Equal(DefaultSize / 2, operation.Item(DefaultStart, DefaultSize, DefaultSource).LongCount(x => x < DefaultStart + DefaultSize / 2));
         }
 
         [Theory]
-        [MemberData("UnaryOperators")]
-        [MemberData("BinaryOperators")]
-        public static void LongCount_Predicate_Some(LabeledOperation source, LabeledOperation operation)
+        [MemberData(nameof(UnaryOperations))]
+        [MemberData(nameof(BinaryOperations))]
+        public static void LongCount_Predicate_None(Labeled<Operation> operation)
         {
-            Assert.Equal(DefaultSize / 2, operation.Item(DefaultStart, DefaultSize, source.Item).LongCount(x => x < DefaultStart + DefaultSize / 2));
+            Assert.Equal(0, operation.Item(DefaultStart, DefaultSize, DefaultSource).LongCount(x => x < DefaultStart));
         }
 
         [Theory]
-        [MemberData("UnaryOperators")]
-        [MemberData("BinaryOperators")]
-        public static void LongCount_Predicate_None(LabeledOperation source, LabeledOperation operation)
+        [MemberData(nameof(UnaryOperations))]
+        [MemberData(nameof(BinaryOperations))]
+        public static void Max(Labeled<Operation> operation)
         {
-            Assert.Equal(0, operation.Item(DefaultStart, DefaultSize, source.Item).LongCount(x => x < DefaultStart));
+            Assert.Equal(DefaultStart + DefaultSize - 1, operation.Item(DefaultStart, DefaultSize, DefaultSource).Max());
         }
 
         [Theory]
-        [MemberData("UnaryFailingOperators")]
-        [MemberData("BinaryFailingOperators")]
-        public static void LongCount_AggregateException(LabeledOperation source, LabeledOperation operation)
+        [MemberData(nameof(UnaryOperations))]
+        [MemberData(nameof(BinaryOperations))]
+        public static void Max_Nullable(Labeled<Operation> operation)
         {
-            Functions.AssertThrowsWrapped<DeliberateTestException>(() => operation.Item(DefaultStart, DefaultSize, source.Item).LongCount());
-            Functions.AssertThrowsWrapped<DeliberateTestException>(() => operation.Item(DefaultStart, DefaultSize, source.Item).LongCount(x => true));
+            Assert.Equal(DefaultStart + DefaultSize - 1, operation.Item(DefaultStart, DefaultSize, DefaultSource).Max(x => (int?)x));
         }
 
         [Theory]
-        [MemberData("UnaryOperators")]
-        [MemberData("BinaryOperators")]
-        public static void Max(LabeledOperation source, LabeledOperation operation)
+        [MemberData(nameof(UnaryOperations))]
+        [MemberData(nameof(BinaryOperations))]
+        public static void Min(Labeled<Operation> operation)
         {
-            Assert.Equal(DefaultStart + DefaultSize - 1, operation.Item(DefaultStart, DefaultSize, source.Item).Max());
+            Assert.Equal(DefaultStart, operation.Item(DefaultStart, DefaultSize, DefaultSource).Min());
         }
 
         [Theory]
-        [MemberData("UnaryOperators")]
-        [MemberData("BinaryOperators")]
-        public static void Max_Nullable(LabeledOperation source, LabeledOperation operation)
+        [MemberData(nameof(UnaryOperations))]
+        [MemberData(nameof(BinaryOperations))]
+        public static void Min_Nullable(Labeled<Operation> operation)
         {
-            Assert.Equal(DefaultStart + DefaultSize - 1, operation.Item(DefaultStart, DefaultSize, source.Item).Max(x => (int?)x));
+            Assert.Equal(DefaultStart, operation.Item(DefaultStart, DefaultSize, DefaultSource).Min(x => (int?)x));
         }
 
         [Theory]
-        [MemberData("UnaryFailingOperators")]
-        [MemberData("BinaryFailingOperators")]
-        public static void Max_AggregateException(LabeledOperation source, LabeledOperation operation)
-        {
-            Functions.AssertThrowsWrapped<DeliberateTestException>(() => operation.Item(DefaultStart, DefaultSize, source.Item).Max());
-        }
-
-        [Theory]
-        [MemberData("UnaryOperators")]
-        [MemberData("BinaryOperators")]
-        public static void Min(LabeledOperation source, LabeledOperation operation)
-        {
-            Assert.Equal(DefaultStart, operation.Item(DefaultStart, DefaultSize, source.Item).Min());
-        }
-
-        [Theory]
-        [MemberData("UnaryOperators")]
-        [MemberData("BinaryOperators")]
-        public static void Min_Nullable(LabeledOperation source, LabeledOperation operation)
-        {
-            Assert.Equal(DefaultStart, operation.Item(DefaultStart, DefaultSize, source.Item).Min(x => (int?)x));
-        }
-
-        [Theory]
-        [MemberData("UnaryFailingOperators")]
-        [MemberData("BinaryFailingOperators")]
-        public static void Min_AggregateException(LabeledOperation source, LabeledOperation operation)
-        {
-            Functions.AssertThrowsWrapped<DeliberateTestException>(() => operation.Item(DefaultStart, DefaultSize, source.Item).Min());
-        }
-
-        [Theory]
-        [MemberData("UnaryOperators")]
-        [MemberData("BinaryOperators")]
-        public static void OfType(LabeledOperation source, LabeledOperation operation)
+        [MemberData(nameof(UnaryOperators))]
+        [MemberData(nameof(BinaryOperators))]
+        public static void OfType(Labeled<Operation> source, Labeled<Operation> operation)
         {
             int seen = DefaultStart;
             foreach (int i in operation.Item(DefaultStart, DefaultSize, source.Item).OfType<int>())
@@ -711,9 +646,9 @@ namespace Test
         }
 
         [Theory]
-        [MemberData("UnaryOperators")]
-        [MemberData("BinaryOperators")]
-        public static void OfType_NotPipelined(LabeledOperation source, LabeledOperation operation)
+        [MemberData(nameof(UnaryOperators))]
+        [MemberData(nameof(BinaryOperators))]
+        public static void OfType_NotPipelined(Labeled<Operation> source, Labeled<Operation> operation)
         {
             int seen = DefaultStart;
             Assert.All(operation.Item(DefaultStart, DefaultSize, source.Item).OfType<int>().ToList(), x => Assert.Equal(seen++, x));
@@ -721,27 +656,27 @@ namespace Test
         }
 
         [Theory]
-        [MemberData("UnaryOperators")]
-        [MemberData("BinaryOperators")]
-        public static void OfType_Other(LabeledOperation source, LabeledOperation operation)
+        [MemberData(nameof(UnaryOperators))]
+        [MemberData(nameof(BinaryOperators))]
+        public static void OfType_Other(Labeled<Operation> source, Labeled<Operation> operation)
         {
             Assert.Empty(operation.Item(DefaultStart, DefaultSize, source.Item).OfType<long>());
         }
 
         [Theory]
-        [MemberData("UnaryOperators")]
-        [MemberData("BinaryOperators")]
-        public static void OfType_Other_NotPipelined(LabeledOperation source, LabeledOperation operation)
+        [MemberData(nameof(UnaryOperators))]
+        [MemberData(nameof(BinaryOperators))]
+        public static void OfType_Other_NotPipelined(Labeled<Operation> source, Labeled<Operation> operation)
         {
             Assert.Empty(operation.Item(DefaultStart, DefaultSize, source.Item).OfType<long>().ToList());
         }
 
         [Theory]
-        [MemberData("UnaryOperators")]
-        [MemberData("BinaryOperators")]
-        [MemberData("UnaryUnorderedOperators")]
-        [MemberData("BinaryUnorderedOperators")]
-        public static void OrderBy_Initial(LabeledOperation source, LabeledOperation operation)
+        [MemberData(nameof(UnaryOperators))]
+        [MemberData(nameof(BinaryOperators))]
+        [MemberData(nameof(UnaryUnorderedOperators))]
+        [MemberData(nameof(BinaryUnorderedOperators))]
+        public static void OrderBy_Initial(Labeled<Operation> source, Labeled<Operation> operation)
         {
             int seen = DefaultStart;
             foreach (int i in operation.Item(DefaultStart, DefaultSize, source.Item).OrderBy(x => x))
@@ -752,11 +687,11 @@ namespace Test
         }
 
         [Theory]
-        [MemberData("UnaryOperators")]
-        [MemberData("BinaryOperators")]
-        [MemberData("UnaryUnorderedOperators")]
-        [MemberData("BinaryUnorderedOperators")]
-        public static void OrderBy_Initial_NotPipelined(LabeledOperation source, LabeledOperation operation)
+        [MemberData(nameof(UnaryOperators))]
+        [MemberData(nameof(BinaryOperators))]
+        [MemberData(nameof(UnaryUnorderedOperators))]
+        [MemberData(nameof(BinaryUnorderedOperators))]
+        public static void OrderBy_Initial_NotPipelined(Labeled<Operation> source, Labeled<Operation> operation)
         {
             int seen = DefaultStart;
             Assert.All(operation.Item(DefaultStart, DefaultSize, source.Item).OrderBy(x => x).ToList(), x => Assert.Equal(seen++, x));
@@ -764,11 +699,11 @@ namespace Test
         }
 
         [Theory]
-        [MemberData("UnaryOperators")]
-        [MemberData("BinaryOperators")]
-        [MemberData("UnaryUnorderedOperators")]
-        [MemberData("BinaryUnorderedOperators")]
-        public static void OrderBy_OtherDirection(LabeledOperation source, LabeledOperation operation)
+        [MemberData(nameof(UnaryOperators))]
+        [MemberData(nameof(BinaryOperators))]
+        [MemberData(nameof(UnaryUnorderedOperators))]
+        [MemberData(nameof(BinaryUnorderedOperators))]
+        public static void OrderBy_OtherDirection(Labeled<Operation> source, Labeled<Operation> operation)
         {
             int seen = DefaultStart + DefaultSize;
             foreach (int i in operation.Item(DefaultStart, DefaultSize, source.Item).OrderBy(x => -x))
@@ -779,11 +714,11 @@ namespace Test
         }
 
         [Theory]
-        [MemberData("UnaryOperators")]
-        [MemberData("BinaryOperators")]
-        [MemberData("UnaryUnorderedOperators")]
-        [MemberData("BinaryUnorderedOperators")]
-        public static void OrderBy_OtherDirection_NotPipelined(LabeledOperation source, LabeledOperation operation)
+        [MemberData(nameof(UnaryOperators))]
+        [MemberData(nameof(BinaryOperators))]
+        [MemberData(nameof(UnaryUnorderedOperators))]
+        [MemberData(nameof(BinaryUnorderedOperators))]
+        public static void OrderBy_OtherDirection_NotPipelined(Labeled<Operation> source, Labeled<Operation> operation)
         {
             int seen = DefaultStart + DefaultSize;
             Assert.All(operation.Item(DefaultStart, DefaultSize, source.Item).OrderBy(x => -x).ToList(), x => Assert.Equal(--seen, x));
@@ -791,11 +726,11 @@ namespace Test
         }
 
         [Theory]
-        [MemberData("UnaryOperators")]
-        [MemberData("BinaryOperators")]
-        [MemberData("UnaryUnorderedOperators")]
-        [MemberData("BinaryUnorderedOperators")]
-        public static void OrderByDescending_Initial(LabeledOperation source, LabeledOperation operation)
+        [MemberData(nameof(UnaryOperators))]
+        [MemberData(nameof(BinaryOperators))]
+        [MemberData(nameof(UnaryUnorderedOperators))]
+        [MemberData(nameof(BinaryUnorderedOperators))]
+        public static void OrderByDescending_Initial(Labeled<Operation> source, Labeled<Operation> operation)
         {
             int seen = DefaultStart;
             foreach (int i in operation.Item(DefaultStart, DefaultSize, source.Item).OrderByDescending(x => -x))
@@ -806,11 +741,11 @@ namespace Test
         }
 
         [Theory]
-        [MemberData("UnaryOperators")]
-        [MemberData("BinaryOperators")]
-        [MemberData("UnaryUnorderedOperators")]
-        [MemberData("BinaryUnorderedOperators")]
-        public static void OrderByDescending_Initial_NotPipelined(LabeledOperation source, LabeledOperation operation)
+        [MemberData(nameof(UnaryOperators))]
+        [MemberData(nameof(BinaryOperators))]
+        [MemberData(nameof(UnaryUnorderedOperators))]
+        [MemberData(nameof(BinaryUnorderedOperators))]
+        public static void OrderByDescending_Initial_NotPipelined(Labeled<Operation> source, Labeled<Operation> operation)
         {
             int seen = DefaultStart;
             Assert.All(operation.Item(DefaultStart, DefaultSize, source.Item).OrderByDescending(x => -x).ToList(), x => Assert.Equal(seen++, x));
@@ -818,11 +753,11 @@ namespace Test
         }
 
         [Theory]
-        [MemberData("UnaryOperators")]
-        [MemberData("BinaryOperators")]
-        [MemberData("UnaryUnorderedOperators")]
-        [MemberData("BinaryUnorderedOperators")]
-        public static void OrderByDescending_OtherDirection(LabeledOperation source, LabeledOperation operation)
+        [MemberData(nameof(UnaryOperators))]
+        [MemberData(nameof(BinaryOperators))]
+        [MemberData(nameof(UnaryUnorderedOperators))]
+        [MemberData(nameof(BinaryUnorderedOperators))]
+        public static void OrderByDescending_OtherDirection(Labeled<Operation> source, Labeled<Operation> operation)
         {
             int seen = DefaultStart + DefaultSize;
             foreach (int i in operation.Item(DefaultStart, DefaultSize, source.Item).OrderByDescending(x => x))
@@ -833,11 +768,11 @@ namespace Test
         }
 
         [Theory]
-        [MemberData("UnaryOperators")]
-        [MemberData("BinaryOperators")]
-        [MemberData("UnaryUnorderedOperators")]
-        [MemberData("BinaryUnorderedOperators")]
-        public static void OrderByDescending_OtherDirection_NotPipelined(LabeledOperation source, LabeledOperation operation)
+        [MemberData(nameof(UnaryOperators))]
+        [MemberData(nameof(BinaryOperators))]
+        [MemberData(nameof(UnaryUnorderedOperators))]
+        [MemberData(nameof(BinaryUnorderedOperators))]
+        public static void OrderByDescending_OtherDirection_NotPipelined(Labeled<Operation> source, Labeled<Operation> operation)
         {
             int seen = DefaultStart + DefaultSize;
             Assert.All(operation.Item(DefaultStart, DefaultSize, source.Item).OrderByDescending(x => x).ToList(), x => Assert.Equal(--seen, x));
@@ -845,9 +780,9 @@ namespace Test
         }
 
         [Theory]
-        [MemberData("UnaryOperators")]
-        [MemberData("BinaryOperators")]
-        public static void Reverse(LabeledOperation source, LabeledOperation operation)
+        [MemberData(nameof(UnaryOperators))]
+        [MemberData(nameof(BinaryOperators))]
+        public static void Reverse(Labeled<Operation> source, Labeled<Operation> operation)
         {
             int seen = DefaultStart + DefaultSize;
             foreach (int i in operation.Item(DefaultStart, DefaultSize, source.Item).Reverse())
@@ -858,9 +793,9 @@ namespace Test
         }
 
         [Theory]
-        [MemberData("UnaryOperators")]
-        [MemberData("BinaryOperators")]
-        public static void Reverse_NotPipelined(LabeledOperation source, LabeledOperation operation)
+        [MemberData(nameof(UnaryOperators))]
+        [MemberData(nameof(BinaryOperators))]
+        public static void Reverse_NotPipelined(Labeled<Operation> source, Labeled<Operation> operation)
         {
             int seen = DefaultStart + DefaultSize;
             foreach (int i in operation.Item(DefaultStart, DefaultSize, source.Item).Reverse().ToList())
@@ -871,9 +806,9 @@ namespace Test
         }
 
         [Theory]
-        [MemberData("UnaryOperators")]
-        [MemberData("BinaryOperators")]
-        public static void Select(LabeledOperation source, LabeledOperation operation)
+        [MemberData(nameof(UnaryOperators))]
+        [MemberData(nameof(BinaryOperators))]
+        public static void Select(Labeled<Operation> source, Labeled<Operation> operation)
         {
             int seen = -DefaultStart;
             foreach (int i in operation.Item(DefaultStart, DefaultSize, source.Item).Select(x => -x))
@@ -884,9 +819,9 @@ namespace Test
         }
 
         [Theory]
-        [MemberData("UnaryOperators")]
-        [MemberData("BinaryOperators")]
-        public static void Select_NotPipelined(LabeledOperation source, LabeledOperation operation)
+        [MemberData(nameof(UnaryOperators))]
+        [MemberData(nameof(BinaryOperators))]
+        public static void Select_NotPipelined(Labeled<Operation> source, Labeled<Operation> operation)
         {
             int seen = -DefaultStart;
             Assert.All(operation.Item(DefaultStart, DefaultSize, source.Item).Select(x => -x).ToList(), x => Assert.Equal(seen--, x));
@@ -894,9 +829,9 @@ namespace Test
         }
 
         [Theory]
-        [MemberData("UnaryOperators")]
-        [MemberData("BinaryOperators")]
-        public static void Select_Indexed(LabeledOperation source, LabeledOperation operation)
+        [MemberData(nameof(UnaryOperators))]
+        [MemberData(nameof(BinaryOperators))]
+        public static void Select_Indexed(Labeled<Operation> source, Labeled<Operation> operation)
         {
             int seen = -DefaultStart;
             foreach (int i in operation.Item(DefaultStart, DefaultSize, source.Item).Select((x, index) => { Assert.Equal(DefaultStart + index, x); return -x; }))
@@ -907,9 +842,9 @@ namespace Test
         }
 
         [Theory]
-        [MemberData("UnaryOperators")]
-        [MemberData("BinaryOperators")]
-        public static void Select_Indexed_NotPipelined(LabeledOperation source, LabeledOperation operation)
+        [MemberData(nameof(UnaryOperators))]
+        [MemberData(nameof(BinaryOperators))]
+        public static void Select_Indexed_NotPipelined(Labeled<Operation> source, Labeled<Operation> operation)
         {
             int seen = -DefaultStart;
             Assert.All(operation.Item(DefaultStart, DefaultSize, source.Item).Select((x, index) => { Assert.Equal(DefaultStart + index, x); return -x; }).ToList(), x => Assert.Equal(seen--, x));
@@ -917,9 +852,9 @@ namespace Test
         }
 
         [Theory]
-        [MemberData("UnaryOperators")]
-        [MemberData("BinaryOperators")]
-        public static void SelectMany(LabeledOperation source, LabeledOperation operation)
+        [MemberData(nameof(UnaryOperators))]
+        [MemberData(nameof(BinaryOperators))]
+        public static void SelectMany(Labeled<Operation> source, Labeled<Operation> operation)
         {
             int seen = -DefaultStart;
             foreach (int i in operation.Item(0, DefaultSize, source.Item).SelectMany(x => new[] { 0, -1 }.Select(y => y + -DefaultStart - 2 * x)))
@@ -930,9 +865,9 @@ namespace Test
         }
 
         [Theory]
-        [MemberData("UnaryOperators")]
-        [MemberData("BinaryOperators")]
-        public static void SelectMany_NotPipelined(LabeledOperation source, LabeledOperation operation)
+        [MemberData(nameof(UnaryOperators))]
+        [MemberData(nameof(BinaryOperators))]
+        public static void SelectMany_NotPipelined(Labeled<Operation> source, Labeled<Operation> operation)
         {
             int seen = -DefaultStart;
             Assert.All(operation.Item(0, DefaultSize, source.Item).SelectMany(x => new[] { 0, -1 }.Select(y => y + -DefaultStart - 2 * x)).ToList(), x => Assert.Equal(seen--, x));
@@ -940,9 +875,9 @@ namespace Test
         }
 
         [Theory]
-        [MemberData("UnaryOperators")]
-        [MemberData("BinaryOperators")]
-        public static void SelectMany_Indexed(LabeledOperation source, LabeledOperation operation)
+        [MemberData(nameof(UnaryOperators))]
+        [MemberData(nameof(BinaryOperators))]
+        public static void SelectMany_Indexed(Labeled<Operation> source, Labeled<Operation> operation)
         {
             int seen = -DefaultStart;
             foreach (int i in operation.Item(0, DefaultSize, source.Item).SelectMany((x, index) => { Assert.Equal(index, x); return new[] { 0, -1 }.Select(y => y + -DefaultStart - 2 * x); }))
@@ -953,9 +888,9 @@ namespace Test
         }
 
         [Theory]
-        [MemberData("UnaryOperators")]
-        [MemberData("BinaryOperators")]
-        public static void SelectMany_Indexed_NotPipelined(LabeledOperation source, LabeledOperation operation)
+        [MemberData(nameof(UnaryOperators))]
+        [MemberData(nameof(BinaryOperators))]
+        public static void SelectMany_Indexed_NotPipelined(Labeled<Operation> source, Labeled<Operation> operation)
         {
             int seen = -DefaultStart;
             Assert.All(operation.Item(0, DefaultSize, source.Item).SelectMany((x, index) => { Assert.Equal(index, x); return new[] { 0, -1 }.Select(y => y + -DefaultStart - 2 * x); }).ToList(), x => Assert.Equal(seen--, x));
@@ -963,9 +898,9 @@ namespace Test
         }
 
         [Theory]
-        [MemberData("UnaryOperators")]
-        [MemberData("BinaryOperators")]
-        public static void SelectMany_ResultSelector(LabeledOperation source, LabeledOperation operation)
+        [MemberData(nameof(UnaryOperators))]
+        [MemberData(nameof(BinaryOperators))]
+        public static void SelectMany_ResultSelector(Labeled<Operation> source, Labeled<Operation> operation)
         {
             int seen = -DefaultStart;
             foreach (int i in operation.Item(0, DefaultSize, source.Item).SelectMany(x => new[] { 0, -1 }, (x, y) => y + -DefaultStart - 2 * x))
@@ -976,9 +911,9 @@ namespace Test
         }
 
         [Theory]
-        [MemberData("UnaryOperators")]
-        [MemberData("BinaryOperators")]
-        public static void SelectMany_ResultSelector_NotPipelined(LabeledOperation source, LabeledOperation operation)
+        [MemberData(nameof(UnaryOperators))]
+        [MemberData(nameof(BinaryOperators))]
+        public static void SelectMany_ResultSelector_NotPipelined(Labeled<Operation> source, Labeled<Operation> operation)
         {
             int seen = -DefaultStart;
             Assert.All(operation.Item(0, DefaultSize, source.Item).SelectMany(x => new[] { 0, -1 }, (x, y) => y + -DefaultStart - 2 * x).ToList(), x => Assert.Equal(seen--, x));
@@ -986,9 +921,9 @@ namespace Test
         }
 
         [Theory]
-        [MemberData("UnaryOperators")]
-        [MemberData("BinaryOperators")]
-        public static void SelectMany_Indexed_ResultSelector(LabeledOperation source, LabeledOperation operation)
+        [MemberData(nameof(UnaryOperators))]
+        [MemberData(nameof(BinaryOperators))]
+        public static void SelectMany_Indexed_ResultSelector(Labeled<Operation> source, Labeled<Operation> operation)
         {
             int seen = -DefaultStart;
             foreach (int i in operation.Item(0, DefaultSize, source.Item).SelectMany((x, index) => { Assert.Equal(index, x); return new[] { 0, -1 }; }, (x, y) => y + -DefaultStart - 2 * x))
@@ -999,9 +934,9 @@ namespace Test
         }
 
         [Theory]
-        [MemberData("UnaryOperators")]
-        [MemberData("BinaryOperators")]
-        public static void SelectMany_Indexed_ResultSelector_NotPipelined(LabeledOperation source, LabeledOperation operation)
+        [MemberData(nameof(UnaryOperators))]
+        [MemberData(nameof(BinaryOperators))]
+        public static void SelectMany_Indexed_ResultSelector_NotPipelined(Labeled<Operation> source, Labeled<Operation> operation)
         {
             int seen = -DefaultStart;
             Assert.All(operation.Item(0, DefaultSize, source.Item).SelectMany((x, index) => { Assert.Equal(index, x); return new[] { 0, -1 }; }, (x, y) => y + -DefaultStart - 2 * x).ToList(), x => Assert.Equal(seen--, x));
@@ -1009,93 +944,50 @@ namespace Test
         }
 
         [Theory]
-        [MemberData("UnaryOperators")]
-        [MemberData("BinaryOperators")]
-        public static void SequenceEqual(LabeledOperation source, LabeledOperation operation)
+        [MemberData(nameof(UnaryOperators))]
+        [MemberData(nameof(BinaryOperators))]
+        public static void SequenceEqual(Labeled<Operation> source, Labeled<Operation> operation)
         {
             Assert.True(operation.Item(DefaultStart, DefaultSize, source.Item).SequenceEqual(ParallelEnumerable.Range(DefaultStart, DefaultSize).AsOrdered()));
             Assert.True(ParallelEnumerable.Range(DefaultStart, DefaultSize).AsOrdered().SequenceEqual(operation.Item(DefaultStart, DefaultSize, source.Item)));
         }
 
         [Theory]
-        [MemberData("UnaryOperators")]
-        [MemberData("BinaryOperators")]
-        public static void SequenceEqual_Self(LabeledOperation source, LabeledOperation operation)
+        [MemberData(nameof(UnaryOperators))]
+        [MemberData(nameof(BinaryOperators))]
+        public static void SequenceEqual_Self(Labeled<Operation> source, Labeled<Operation> operation)
         {
             Assert.True(operation.Item(DefaultStart, DefaultSize, source.Item).SequenceEqual(operation.Item(DefaultStart, DefaultSize, source.Item)));
         }
 
         [Theory]
-        [MemberData("UnaryFailingOperators")]
-        [MemberData("BinaryFailingOperators")]
-        [MemberData("OrderFailingOperators")]
-        public static void SequenceEqual_AggregateException(LabeledOperation source, LabeledOperation operation)
+        [MemberData(nameof(UnaryOperations))]
+        [MemberData(nameof(BinaryOperations))]
+        public static void Single(Labeled<Operation> operation)
         {
-            // Sequence equal double wraps queries that throw.
-            ThrowsWrapped(() => operation.Item(DefaultStart, DefaultSize, source.Item).SequenceEqual(ParallelEnumerable.Range(DefaultStart, DefaultSize).AsOrdered()));
-            ThrowsWrapped(() => ParallelEnumerable.Range(DefaultStart, DefaultSize).AsOrdered().SequenceEqual(operation.Item(DefaultStart, DefaultSize, source.Item)));
-        }
-
-        private static void ThrowsWrapped(Action query)
-        {
-            AggregateException outer = Assert.Throws<AggregateException>(query);
-            Assert.All(outer.InnerExceptions, inner =>
-            {
-                Assert.IsType<AggregateException>(inner);
-                Assert.All(((AggregateException)inner).InnerExceptions, e => Assert.IsType<DeliberateTestException>(e));
-            });
+            Assert.Equal(DefaultStart, operation.Item(DefaultStart, 1, DefaultSource).Single());
+            Assert.Equal(DefaultStart + DefaultSize / 2, operation.Item(DefaultStart, DefaultSize, DefaultSource).Single(x => x == DefaultStart + DefaultSize / 2));
         }
 
         [Theory]
-        [MemberData("UnaryOperators")]
-        [MemberData("BinaryOperators")]
-        [MemberData("UnaryUnorderedOperators")]
-        [MemberData("BinaryUnorderedOperators")]
-        public static void Single(LabeledOperation source, LabeledOperation operation)
+        [MemberData(nameof(UnaryOperations))]
+        [MemberData(nameof(BinaryOperations))]
+        public static void SingleOrDefault(Labeled<Operation> operation)
         {
-            Assert.Equal(DefaultStart, operation.Item(DefaultStart, 1, source.Item).Single());
-            Assert.Equal(DefaultStart + DefaultSize / 2, operation.Item(DefaultStart, DefaultSize, source.Item).Single(x => x == DefaultStart + DefaultSize / 2));
-        }
-
-        [Theory]
-        [MemberData("UnaryFailingOperators")]
-        [MemberData("BinaryFailingOperators")]
-        public static void Single_AggregateException(LabeledOperation source, LabeledOperation operation)
-        {
-            Functions.AssertThrowsWrapped<DeliberateTestException>(() => operation.Item(DefaultStart, 2, source.Item).Single());
-            Functions.AssertThrowsWrapped<DeliberateTestException>(() => operation.Item(DefaultStart, 2, source.Item).Single(x => true));
-        }
-
-        [Theory]
-        [MemberData("UnaryOperators")]
-        [MemberData("BinaryOperators")]
-        [MemberData("UnaryUnorderedOperators")]
-        [MemberData("BinaryUnorderedOperators")]
-        public static void SingleOrDefault(LabeledOperation source, LabeledOperation operation)
-        {
-            Assert.Equal(DefaultStart, operation.Item(DefaultStart, 1, source.Item).SingleOrDefault());
-            Assert.Equal(DefaultStart + DefaultSize / 2, operation.Item(DefaultStart, DefaultSize, source.Item).SingleOrDefault(x => x == DefaultStart + DefaultSize / 2));
+            Assert.Equal(DefaultStart, operation.Item(DefaultStart, 1, DefaultSource).SingleOrDefault());
+            Assert.Equal(DefaultStart + DefaultSize / 2, operation.Item(DefaultStart, DefaultSize, DefaultSource).SingleOrDefault(x => x == DefaultStart + DefaultSize / 2));
 
             if (!operation.ToString().StartsWith("DefaultIfEmpty"))
             {
-                Assert.Equal(default(int), operation.Item(DefaultStart, 0, source.Item).SingleOrDefault());
-                Assert.Equal(default(int), operation.Item(DefaultStart, 0, source.Item).SingleOrDefault(x => x == DefaultStart + DefaultSize / 2));
+                Assert.Equal(default(int), operation.Item(DefaultStart, 0, DefaultSource).SingleOrDefault());
+                Assert.Equal(default(int), operation.Item(DefaultStart, 0, DefaultSource).SingleOrDefault(x => x == DefaultStart + DefaultSize / 2));
             }
         }
 
         [Theory]
-        [MemberData("UnaryFailingOperators")]
-        [MemberData("BinaryFailingOperators")]
-        public static void SingleOrDefault_AggregateException(LabeledOperation source, LabeledOperation operation)
-        {
-            Functions.AssertThrowsWrapped<DeliberateTestException>(() => operation.Item(DefaultStart, 2, source.Item).SingleOrDefault());
-            Functions.AssertThrowsWrapped<DeliberateTestException>(() => operation.Item(DefaultStart, 2, source.Item).SingleOrDefault(x => true));
-        }
-
-        [Theory]
-        [MemberData("UnaryOperators")]
-        [MemberData("BinaryOperators")]
-        public static void Skip(LabeledOperation source, LabeledOperation operation)
+        [MemberData(nameof(UnaryOperators))]
+        [MemberData(nameof(BinaryOperators))]
+        public static void Skip(Labeled<Operation> source, Labeled<Operation> operation)
         {
             int seen = DefaultStart + DefaultSize / 2;
             foreach (int i in operation.Item(DefaultStart, DefaultSize, source.Item).Skip(DefaultSize / 2))
@@ -1106,9 +998,9 @@ namespace Test
         }
 
         [Theory]
-        [MemberData("UnaryOperators")]
-        [MemberData("BinaryOperators")]
-        public static void Skip_NotPipelined(LabeledOperation source, LabeledOperation operation)
+        [MemberData(nameof(UnaryOperators))]
+        [MemberData(nameof(BinaryOperators))]
+        public static void Skip_NotPipelined(Labeled<Operation> source, Labeled<Operation> operation)
         {
             int seen = DefaultStart + DefaultSize / 2;
             Assert.All(operation.Item(DefaultStart, DefaultSize, source.Item).Skip(DefaultSize / 2).ToList(), x => Assert.Equal(seen++, x));
@@ -1116,9 +1008,9 @@ namespace Test
         }
 
         [Theory]
-        [MemberData("UnaryOperators")]
-        [MemberData("BinaryOperators")]
-        public static void SkipWhile(LabeledOperation source, LabeledOperation operation)
+        [MemberData(nameof(UnaryOperators))]
+        [MemberData(nameof(BinaryOperators))]
+        public static void SkipWhile(Labeled<Operation> source, Labeled<Operation> operation)
         {
             int seen = DefaultStart + DefaultSize / 2;
             foreach (int i in operation.Item(DefaultStart, DefaultSize, source.Item).SkipWhile(x => x < DefaultStart + DefaultSize / 2))
@@ -1129,9 +1021,9 @@ namespace Test
         }
 
         [Theory]
-        [MemberData("UnaryOperators")]
-        [MemberData("BinaryOperators")]
-        public static void SkipWhile_NotPipelined(LabeledOperation source, LabeledOperation operation)
+        [MemberData(nameof(UnaryOperators))]
+        [MemberData(nameof(BinaryOperators))]
+        public static void SkipWhile_NotPipelined(Labeled<Operation> source, Labeled<Operation> operation)
         {
             int seen = DefaultStart + DefaultSize / 2;
             Assert.All(operation.Item(DefaultStart, DefaultSize, source.Item).SkipWhile(x => x < DefaultStart + DefaultSize / 2).ToList(), x => Assert.Equal(seen++, x));
@@ -1139,9 +1031,9 @@ namespace Test
         }
 
         [Theory]
-        [MemberData("UnaryOperators")]
-        [MemberData("BinaryOperators")]
-        public static void SkipWhile_Indexed(LabeledOperation source, LabeledOperation operation)
+        [MemberData(nameof(UnaryOperators))]
+        [MemberData(nameof(BinaryOperators))]
+        public static void SkipWhile_Indexed(Labeled<Operation> source, Labeled<Operation> operation)
         {
             int seen = DefaultStart + DefaultSize / 2;
             foreach (int i in operation.Item(DefaultStart, DefaultSize, source.Item).SkipWhile((x, index) => index < DefaultSize / 2))
@@ -1152,9 +1044,9 @@ namespace Test
         }
 
         [Theory]
-        [MemberData("UnaryOperators")]
-        [MemberData("BinaryOperators")]
-        public static void SkipWhile_Indexed_NotPipelined(LabeledOperation source, LabeledOperation operation)
+        [MemberData(nameof(UnaryOperators))]
+        [MemberData(nameof(BinaryOperators))]
+        public static void SkipWhile_Indexed_NotPipelined(Labeled<Operation> source, Labeled<Operation> operation)
         {
             int seen = DefaultStart + DefaultSize / 2;
             Assert.All(operation.Item(DefaultStart, DefaultSize, source.Item).SkipWhile((x, index) => index < DefaultSize / 2).ToList(), x => Assert.Equal(seen++, x));
@@ -1162,37 +1054,25 @@ namespace Test
         }
 
         [Theory]
-        [MemberData("UnaryOperators")]
-        [MemberData("BinaryOperators")]
-        [MemberData("UnaryUnorderedOperators")]
-        [MemberData("BinaryUnorderedOperators")]
-        public static void Sum(LabeledOperation source, LabeledOperation operation)
+        [MemberData(nameof(UnaryOperations))]
+        [MemberData(nameof(BinaryOperations))]
+        public static void Sum(Labeled<Operation> operation)
         {
-            Assert.Equal(Functions.SumRange(DefaultStart, DefaultSize), operation.Item(DefaultStart, DefaultSize, source.Item).Sum());
+            Assert.Equal(Functions.SumRange(DefaultStart, DefaultSize), operation.Item(DefaultStart, DefaultSize, DefaultSource).Sum());
         }
 
         [Theory]
-        [MemberData("UnaryOperators")]
-        [MemberData("BinaryOperators")]
-        [MemberData("UnaryUnorderedOperators")]
-        [MemberData("BinaryUnorderedOperators")]
-        public static void Sum_Nullable(LabeledOperation source, LabeledOperation operation)
+        [MemberData(nameof(UnaryOperations))]
+        [MemberData(nameof(BinaryOperations))]
+        public static void Sum_Nullable(Labeled<Operation> operation)
         {
-            Assert.Equal(Functions.SumRange(DefaultStart, DefaultSize), operation.Item(DefaultStart, DefaultSize, source.Item).Sum(x => (int?)x));
+            Assert.Equal(Functions.SumRange(DefaultStart, DefaultSize), operation.Item(DefaultStart, DefaultSize, DefaultSource).Sum(x => (int?)x));
         }
 
         [Theory]
-        [MemberData("UnaryFailingOperators")]
-        [MemberData("BinaryFailingOperators")]
-        public static void Sum_AggregateException(LabeledOperation source, LabeledOperation operation)
-        {
-            Functions.AssertThrowsWrapped<DeliberateTestException>(() => operation.Item(DefaultStart, DefaultSize, source.Item).Sum());
-        }
-
-        [Theory]
-        [MemberData("UnaryOperators")]
-        [MemberData("BinaryOperators")]
-        public static void Take(LabeledOperation source, LabeledOperation operation)
+        [MemberData(nameof(UnaryOperators))]
+        [MemberData(nameof(BinaryOperators))]
+        public static void Take(Labeled<Operation> source, Labeled<Operation> operation)
         {
             int seen = DefaultStart;
             foreach (int i in operation.Item(DefaultStart, DefaultSize, source.Item).Take(DefaultSize / 2))
@@ -1203,9 +1083,9 @@ namespace Test
         }
 
         [Theory]
-        [MemberData("UnaryOperators")]
-        [MemberData("BinaryOperators")]
-        public static void Take_NotPipelined(LabeledOperation source, LabeledOperation operation)
+        [MemberData(nameof(UnaryOperators))]
+        [MemberData(nameof(BinaryOperators))]
+        public static void Take_NotPipelined(Labeled<Operation> source, Labeled<Operation> operation)
         {
             int seen = DefaultStart;
             Assert.All(operation.Item(DefaultStart, DefaultSize, source.Item).Take(DefaultSize / 2).ToList(), x => Assert.Equal(seen++, x));
@@ -1213,9 +1093,9 @@ namespace Test
         }
 
         [Theory]
-        [MemberData("UnaryOperators")]
-        [MemberData("BinaryOperators")]
-        public static void TakeWhile(LabeledOperation source, LabeledOperation operation)
+        [MemberData(nameof(UnaryOperators))]
+        [MemberData(nameof(BinaryOperators))]
+        public static void TakeWhile(Labeled<Operation> source, Labeled<Operation> operation)
         {
             int seen = DefaultStart;
             foreach (int i in operation.Item(DefaultStart, DefaultSize, source.Item).TakeWhile(x => x < DefaultStart + DefaultSize / 2))
@@ -1226,9 +1106,9 @@ namespace Test
         }
 
         [Theory]
-        [MemberData("UnaryOperators")]
-        [MemberData("BinaryOperators")]
-        public static void TakeWhile_NotPipelined(LabeledOperation source, LabeledOperation operation)
+        [MemberData(nameof(UnaryOperators))]
+        [MemberData(nameof(BinaryOperators))]
+        public static void TakeWhile_NotPipelined(Labeled<Operation> source, Labeled<Operation> operation)
         {
             int seen = DefaultStart;
             Assert.All(operation.Item(DefaultStart, DefaultSize, source.Item).TakeWhile(x => x < DefaultStart + DefaultSize / 2).ToList(), x => Assert.Equal(seen++, x));
@@ -1236,9 +1116,9 @@ namespace Test
         }
 
         [Theory]
-        [MemberData("UnaryOperators")]
-        [MemberData("BinaryOperators")]
-        public static void TakeWhile_Indexed(LabeledOperation source, LabeledOperation operation)
+        [MemberData(nameof(UnaryOperators))]
+        [MemberData(nameof(BinaryOperators))]
+        public static void TakeWhile_Indexed(Labeled<Operation> source, Labeled<Operation> operation)
         {
             int seen = DefaultStart;
             foreach (int i in operation.Item(DefaultStart, DefaultSize, source.Item).TakeWhile((x, index) => index < DefaultSize / 2))
@@ -1249,9 +1129,9 @@ namespace Test
         }
 
         [Theory]
-        [MemberData("UnaryOperators")]
-        [MemberData("BinaryOperators")]
-        public static void TakeWhile_Indexed_NotPipelined(LabeledOperation source, LabeledOperation operation)
+        [MemberData(nameof(UnaryOperators))]
+        [MemberData(nameof(BinaryOperators))]
+        public static void TakeWhile_Indexed_NotPipelined(Labeled<Operation> source, Labeled<Operation> operation)
         {
             int seen = DefaultStart;
             Assert.All(operation.Item(DefaultStart, DefaultSize, source.Item).TakeWhile((x, index) => index < DefaultSize / 2).ToList(), x => Assert.Equal(seen++, x));
@@ -1259,11 +1139,11 @@ namespace Test
         }
 
         [Theory]
-        [MemberData("UnaryOperators")]
-        [MemberData("BinaryOperators")]
-        [MemberData("UnaryUnorderedOperators")]
-        [MemberData("BinaryUnorderedOperators")]
-        public static void ThenBy_Initial(LabeledOperation source, LabeledOperation operation)
+        [MemberData(nameof(UnaryOperators))]
+        [MemberData(nameof(BinaryOperators))]
+        [MemberData(nameof(UnaryUnorderedOperators))]
+        [MemberData(nameof(BinaryUnorderedOperators))]
+        public static void ThenBy_Initial(Labeled<Operation> source, Labeled<Operation> operation)
         {
             int seen = DefaultStart;
             foreach (int i in operation.Item(DefaultStart, DefaultSize, source.Item).OrderBy(x => 0).ThenBy(x => x))
@@ -1274,11 +1154,11 @@ namespace Test
         }
 
         [Theory]
-        [MemberData("UnaryOperators")]
-        [MemberData("BinaryOperators")]
-        [MemberData("UnaryUnorderedOperators")]
-        [MemberData("BinaryUnorderedOperators")]
-        public static void ThenBy_Initial_NotPipelined(LabeledOperation source, LabeledOperation operation)
+        [MemberData(nameof(UnaryOperators))]
+        [MemberData(nameof(BinaryOperators))]
+        [MemberData(nameof(UnaryUnorderedOperators))]
+        [MemberData(nameof(BinaryUnorderedOperators))]
+        public static void ThenBy_Initial_NotPipelined(Labeled<Operation> source, Labeled<Operation> operation)
         {
             int seen = DefaultStart;
             Assert.All(operation.Item(DefaultStart, DefaultSize, source.Item).OrderBy(x => 0).ThenBy(x => x).ToList(), x => Assert.Equal(seen++, x));
@@ -1286,11 +1166,11 @@ namespace Test
         }
 
         [Theory]
-        [MemberData("UnaryOperators")]
-        [MemberData("BinaryOperators")]
-        [MemberData("UnaryUnorderedOperators")]
-        [MemberData("BinaryUnorderedOperators")]
-        public static void ThenBy_OtherDirection(LabeledOperation source, LabeledOperation operation)
+        [MemberData(nameof(UnaryOperators))]
+        [MemberData(nameof(BinaryOperators))]
+        [MemberData(nameof(UnaryUnorderedOperators))]
+        [MemberData(nameof(BinaryUnorderedOperators))]
+        public static void ThenBy_OtherDirection(Labeled<Operation> source, Labeled<Operation> operation)
         {
             int seen = DefaultStart + DefaultSize;
             foreach (int i in operation.Item(DefaultStart, DefaultSize, source.Item).OrderBy(x => 0).ThenBy(x => -x))
@@ -1301,11 +1181,11 @@ namespace Test
         }
 
         [Theory]
-        [MemberData("UnaryOperators")]
-        [MemberData("BinaryOperators")]
-        [MemberData("UnaryUnorderedOperators")]
-        [MemberData("BinaryUnorderedOperators")]
-        public static void ThenBy_OtherDirection_NotPipelined(LabeledOperation source, LabeledOperation operation)
+        [MemberData(nameof(UnaryOperators))]
+        [MemberData(nameof(BinaryOperators))]
+        [MemberData(nameof(UnaryUnorderedOperators))]
+        [MemberData(nameof(BinaryUnorderedOperators))]
+        public static void ThenBy_OtherDirection_NotPipelined(Labeled<Operation> source, Labeled<Operation> operation)
         {
             int seen = DefaultStart + DefaultSize;
             Assert.All(operation.Item(DefaultStart, DefaultSize, source.Item).OrderBy(x => 0).ThenBy(x => -x).ToList(), x => Assert.Equal(--seen, x));
@@ -1313,11 +1193,11 @@ namespace Test
         }
 
         [Theory]
-        [MemberData("UnaryOperators")]
-        [MemberData("BinaryOperators")]
-        [MemberData("UnaryUnorderedOperators")]
-        [MemberData("BinaryUnorderedOperators")]
-        public static void ThenByDescending_Initial(LabeledOperation source, LabeledOperation operation)
+        [MemberData(nameof(UnaryOperators))]
+        [MemberData(nameof(BinaryOperators))]
+        [MemberData(nameof(UnaryUnorderedOperators))]
+        [MemberData(nameof(BinaryUnorderedOperators))]
+        public static void ThenByDescending_Initial(Labeled<Operation> source, Labeled<Operation> operation)
         {
             int seen = DefaultStart;
             foreach (int i in operation.Item(DefaultStart, DefaultSize, source.Item).OrderBy(x => 0).ThenByDescending(x => -x))
@@ -1328,11 +1208,11 @@ namespace Test
         }
 
         [Theory]
-        [MemberData("UnaryOperators")]
-        [MemberData("BinaryOperators")]
-        [MemberData("UnaryUnorderedOperators")]
-        [MemberData("BinaryUnorderedOperators")]
-        public static void ThenByDescending_Initial_NotPipelined(LabeledOperation source, LabeledOperation operation)
+        [MemberData(nameof(UnaryOperators))]
+        [MemberData(nameof(BinaryOperators))]
+        [MemberData(nameof(UnaryUnorderedOperators))]
+        [MemberData(nameof(BinaryUnorderedOperators))]
+        public static void ThenByDescending_Initial_NotPipelined(Labeled<Operation> source, Labeled<Operation> operation)
         {
             int seen = DefaultStart;
             Assert.All(operation.Item(DefaultStart, DefaultSize, source.Item).OrderBy(x => 0).ThenByDescending(x => -x).ToList(), x => Assert.Equal(seen++, x));
@@ -1340,11 +1220,11 @@ namespace Test
         }
 
         [Theory]
-        [MemberData("UnaryOperators")]
-        [MemberData("BinaryOperators")]
-        [MemberData("UnaryUnorderedOperators")]
-        [MemberData("BinaryUnorderedOperators")]
-        public static void ThenByDescending_OtherDirection(LabeledOperation source, LabeledOperation operation)
+        [MemberData(nameof(UnaryOperators))]
+        [MemberData(nameof(BinaryOperators))]
+        [MemberData(nameof(UnaryUnorderedOperators))]
+        [MemberData(nameof(BinaryUnorderedOperators))]
+        public static void ThenByDescending_OtherDirection(Labeled<Operation> source, Labeled<Operation> operation)
         {
             int seen = DefaultStart + DefaultSize;
             foreach (int i in operation.Item(DefaultStart, DefaultSize, source.Item).OrderBy(x => 0).ThenByDescending(x => x))
@@ -1355,11 +1235,11 @@ namespace Test
         }
 
         [Theory]
-        [MemberData("UnaryOperators")]
-        [MemberData("BinaryOperators")]
-        [MemberData("UnaryUnorderedOperators")]
-        [MemberData("BinaryUnorderedOperators")]
-        public static void ThenByDescending_OtherDirection_NotPipelined(LabeledOperation source, LabeledOperation operation)
+        [MemberData(nameof(UnaryOperators))]
+        [MemberData(nameof(BinaryOperators))]
+        [MemberData(nameof(UnaryUnorderedOperators))]
+        [MemberData(nameof(BinaryUnorderedOperators))]
+        public static void ThenByDescending_OtherDirection_NotPipelined(Labeled<Operation> source, Labeled<Operation> operation)
         {
             int seen = DefaultStart + DefaultSize;
             Assert.All(operation.Item(DefaultStart, DefaultSize, source.Item).OrderBy(x => 0).ThenByDescending(x => x).ToList(), x => Assert.Equal(--seen, x));
@@ -1367,9 +1247,9 @@ namespace Test
         }
 
         [Theory]
-        [MemberData("UnaryOperators")]
-        [MemberData("BinaryOperators")]
-        public static void ToArray(LabeledOperation source, LabeledOperation operation)
+        [MemberData(nameof(UnaryOperators))]
+        [MemberData(nameof(BinaryOperators))]
+        public static void ToArray(Labeled<Operation> source, Labeled<Operation> operation)
         {
             int seen = DefaultStart;
             Assert.All(operation.Item(DefaultStart, DefaultSize, source.Item).ToArray(), x => Assert.Equal(seen++, x));
@@ -1377,23 +1257,12 @@ namespace Test
         }
 
         [Theory]
-        [MemberData("UnaryFailingOperators")]
-        [MemberData("BinaryFailingOperators")]
-        [MemberData("OrderFailingOperators")]
-        public static void ToArray_AggregateException(LabeledOperation source, LabeledOperation operation)
-        {
-            Functions.AssertThrowsWrapped<DeliberateTestException>(() => operation.Item(DefaultStart, DefaultSize, source.Item).ToArray());
-        }
-
-        [Theory]
-        [MemberData("UnaryOperators")]
-        [MemberData("BinaryOperators")]
-        [MemberData("UnaryUnorderedOperators")]
-        [MemberData("BinaryUnorderedOperators")]
-        public static void ToDictionary(LabeledOperation source, LabeledOperation operation)
+        [MemberData(nameof(UnaryOperations))]
+        [MemberData(nameof(BinaryOperations))]
+        public static void ToDictionary(Labeled<Operation> operation)
         {
             IntegerRangeSet seen = new IntegerRangeSet(DefaultStart, DefaultSize);
-            Assert.All(operation.Item(DefaultStart, DefaultSize, source.Item).ToDictionary(x => x * 2),
+            Assert.All(operation.Item(DefaultStart, DefaultSize, DefaultSource).ToDictionary(x => x * 2),
                 p =>
                 {
                     seen.Add(p.Key / 2);
@@ -1403,14 +1272,12 @@ namespace Test
         }
 
         [Theory]
-        [MemberData("UnaryOperators")]
-        [MemberData("BinaryOperators")]
-        [MemberData("UnaryUnorderedOperators")]
-        [MemberData("BinaryUnorderedOperators")]
-        public static void ToDictionary_ElementSelector(LabeledOperation source, LabeledOperation operation)
+        [MemberData(nameof(UnaryOperations))]
+        [MemberData(nameof(BinaryOperations))]
+        public static void ToDictionary_ElementSelector(Labeled<Operation> operation)
         {
             IntegerRangeSet seen = new IntegerRangeSet(DefaultStart, DefaultSize);
-            Assert.All(operation.Item(DefaultStart, DefaultSize, source.Item).ToDictionary(x => x, y => y * 2),
+            Assert.All(operation.Item(DefaultStart, DefaultSize, DefaultSource).ToDictionary(x => x, y => y * 2),
                 p =>
                 {
                     seen.Add(p.Key);
@@ -1420,19 +1287,9 @@ namespace Test
         }
 
         [Theory]
-        [MemberData("UnaryFailingOperators")]
-        [MemberData("BinaryFailingOperators")]
-        [MemberData("OrderFailingOperators")]
-        public static void ToDictionary_AggregateException(LabeledOperation source, LabeledOperation operation)
-        {
-            Functions.AssertThrowsWrapped<DeliberateTestException>(() => operation.Item(DefaultStart, DefaultSize, source.Item).ToDictionary(x => x));
-            Functions.AssertThrowsWrapped<DeliberateTestException>(() => operation.Item(DefaultStart, DefaultSize, source.Item).ToDictionary(x => x, y => y));
-        }
-
-        [Theory]
-        [MemberData("UnaryOperators")]
-        [MemberData("BinaryOperators")]
-        public static void ToList(LabeledOperation source, LabeledOperation operation)
+        [MemberData(nameof(UnaryOperators))]
+        [MemberData(nameof(BinaryOperators))]
+        public static void ToList(Labeled<Operation> source, Labeled<Operation> operation)
         {
             int seen = DefaultStart;
             Assert.All(operation.Item(DefaultStart, DefaultSize, source.Item).ToList(), x => Assert.Equal(seen++, x));
@@ -1440,20 +1297,11 @@ namespace Test
         }
 
         [Theory]
-        [MemberData("UnaryFailingOperators")]
-        [MemberData("BinaryFailingOperators")]
-        [MemberData("OrderFailingOperators")]
-        public static void ToList_AggregateException(LabeledOperation source, LabeledOperation operation)
-        {
-            Functions.AssertThrowsWrapped<DeliberateTestException>(() => operation.Item(DefaultStart, DefaultSize, source.Item).ToList());
-        }
-
-        [Theory]
-        [MemberData("UnaryOperators")]
-        [MemberData("BinaryOperators")]
-        [MemberData("UnaryUnorderedOperators")]
-        [MemberData("BinaryUnorderedOperators")]
-        public static void ToLookup(LabeledOperation source, LabeledOperation operation)
+        [MemberData(nameof(UnaryOperators))]
+        [MemberData(nameof(BinaryOperators))]
+        [MemberData(nameof(UnaryUnorderedOperators))]
+        [MemberData(nameof(BinaryUnorderedOperators))]
+        public static void ToLookup(Labeled<Operation> source, Labeled<Operation> operation)
         {
             IntegerRangeSet seenOuter = new IntegerRangeSet(0, 2);
             ILookup<int, int> lookup = operation.Item(DefaultStart, DefaultSize, source.Item).ToLookup(x => x % 2);
@@ -1470,11 +1318,11 @@ namespace Test
         }
 
         [Theory]
-        [MemberData("UnaryOperators")]
-        [MemberData("BinaryOperators")]
-        [MemberData("UnaryUnorderedOperators")]
-        [MemberData("BinaryUnorderedOperators")]
-        public static void ToLookup_ElementSelector(LabeledOperation source, LabeledOperation operation)
+        [MemberData(nameof(UnaryOperators))]
+        [MemberData(nameof(BinaryOperators))]
+        [MemberData(nameof(UnaryUnorderedOperators))]
+        [MemberData(nameof(BinaryUnorderedOperators))]
+        public static void ToLookup_ElementSelector(Labeled<Operation> source, Labeled<Operation> operation)
         {
             IntegerRangeSet seenOuter = new IntegerRangeSet(0, 2);
             ILookup<int, int> lookup = operation.Item(DefaultStart, DefaultSize, source.Item).ToLookup(x => x % 2, y => -y);
@@ -1491,19 +1339,9 @@ namespace Test
         }
 
         [Theory]
-        [MemberData("UnaryFailingOperators")]
-        [MemberData("BinaryFailingOperators")]
-        [MemberData("OrderFailingOperators")]
-        public static void ToLookup_AggregateException(LabeledOperation source, LabeledOperation operation)
-        {
-            Functions.AssertThrowsWrapped<DeliberateTestException>(() => operation.Item(DefaultStart, DefaultSize, source.Item).ToLookup(x => x));
-            Functions.AssertThrowsWrapped<DeliberateTestException>(() => operation.Item(DefaultStart, DefaultSize, source.Item).ToLookup(x => x, y => y));
-        }
-
-        [Theory]
-        [MemberData("UnaryOperators")]
-        [MemberData("BinaryOperators")]
-        public static void Where(LabeledOperation source, LabeledOperation operation)
+        [MemberData(nameof(UnaryOperators))]
+        [MemberData(nameof(BinaryOperators))]
+        public static void Where(Labeled<Operation> source, Labeled<Operation> operation)
         {
             int seen = DefaultStart;
             foreach (int i in operation.Item(DefaultStart, DefaultSize, source.Item).Where(x => x < DefaultStart + DefaultSize / 2))
@@ -1514,9 +1352,9 @@ namespace Test
         }
 
         [Theory]
-        [MemberData("UnaryOperators")]
-        [MemberData("BinaryOperators")]
-        public static void Where_NotPipelined(LabeledOperation source, LabeledOperation operation)
+        [MemberData(nameof(UnaryOperators))]
+        [MemberData(nameof(BinaryOperators))]
+        public static void Where_NotPipelined(Labeled<Operation> source, Labeled<Operation> operation)
         {
             int seen = DefaultStart;
             Assert.All(operation.Item(DefaultStart, DefaultSize, source.Item).Where(x => x < DefaultStart + DefaultSize / 2).ToList(), x => Assert.Equal(seen++, x));
@@ -1524,9 +1362,9 @@ namespace Test
         }
 
         [Theory]
-        [MemberData("UnaryOperators")]
-        [MemberData("BinaryOperators")]
-        public static void Where_Indexed(LabeledOperation source, LabeledOperation operation)
+        [MemberData(nameof(UnaryOperators))]
+        [MemberData(nameof(BinaryOperators))]
+        public static void Where_Indexed(Labeled<Operation> source, Labeled<Operation> operation)
         {
             int seen = DefaultStart;
             foreach (int i in operation.Item(DefaultStart, DefaultSize, source.Item).Where((x, index) => index < DefaultSize / 2))
@@ -1537,9 +1375,9 @@ namespace Test
         }
 
         [Theory]
-        [MemberData("UnaryOperators")]
-        [MemberData("BinaryOperators")]
-        public static void Where_Indexed_NotPipelined(LabeledOperation source, LabeledOperation operation)
+        [MemberData(nameof(UnaryOperators))]
+        [MemberData(nameof(BinaryOperators))]
+        public static void Where_Indexed_NotPipelined(Labeled<Operation> source, Labeled<Operation> operation)
         {
             int seen = DefaultStart;
             Assert.All(operation.Item(DefaultStart, DefaultSize, source.Item).Where((x, index) => index < DefaultSize / 2).ToList(), x => Assert.Equal(seen++, x));
@@ -1547,9 +1385,9 @@ namespace Test
         }
 
         [Theory]
-        [MemberData("UnaryOperators")]
-        [MemberData("BinaryOperators")]
-        public static void Zip(LabeledOperation source, LabeledOperation operation)
+        [MemberData(nameof(UnaryOperators))]
+        [MemberData(nameof(BinaryOperators))]
+        public static void Zip(Labeled<Operation> source, Labeled<Operation> operation)
         {
             int seen = DefaultStart;
             ParallelQuery<int> query = operation.Item(DefaultStart * 2, DefaultSize, source.Item)
@@ -1562,9 +1400,9 @@ namespace Test
         }
 
         [Theory]
-        [MemberData("UnaryOperators")]
-        [MemberData("BinaryOperators")]
-        public static void Zip_NotPipelined(LabeledOperation source, LabeledOperation operation)
+        [MemberData(nameof(UnaryOperators))]
+        [MemberData(nameof(BinaryOperators))]
+        public static void Zip_NotPipelined(Labeled<Operation> source, Labeled<Operation> operation)
         {
             int seen = DefaultStart;
             ParallelQuery<int> query = operation.Item(0, DefaultSize, source.Item)

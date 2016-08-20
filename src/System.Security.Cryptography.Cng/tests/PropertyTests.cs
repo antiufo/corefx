@@ -1,7 +1,8 @@
-// Copyright (c) Microsoft. All rights reserved.
-// Licensed under the MIT license. See LICENSE file in the project root for full license information.
+// Licensed to the .NET Foundation under one or more agreements.
+// The .NET Foundation licenses this file to you under the MIT license.
+// See the LICENSE file in the project root for more information.
 
-using Test.Cryptography;
+using System.Security.Cryptography.EcDsa.Tests;
 using Xunit;
 
 namespace System.Security.Cryptography.Cng.Tests
@@ -13,7 +14,7 @@ namespace System.Security.Cryptography.Cng.Tests
         {
             using (CngKey key = CngKey.Import(TestData.Key_ECDiffieHellmanP256, CngKeyBlobFormat.GenericPublicBlob))
             {
-                Assert.Throws<CryptographicException>(() => key.GetProperty("DOES NOT EXIST", CngPropertyOptions.CustomProperty));
+                Assert.ThrowsAny<CryptographicException>(() => key.GetProperty("DOES NOT EXIST", CngPropertyOptions.CustomProperty));
             }
         }
 
@@ -42,7 +43,7 @@ namespace System.Security.Cryptography.Cng.Tests
             {
                 const string propertyName = "CustomNullProperty";
                 CngProperty p = new CngProperty(propertyName, null, CngPropertyOptions.CustomProperty);
-                Assert.Throws<CryptographicException>(() => key.SetProperty(p));
+                Assert.ThrowsAny<CryptographicException>(() => key.SetProperty(p));
             }
         }
 

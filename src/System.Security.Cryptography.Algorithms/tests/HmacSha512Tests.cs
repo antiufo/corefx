@@ -1,5 +1,6 @@
-﻿// Copyright (c) Microsoft. All rights reserved.
-// Licensed under the MIT license. See LICENSE file in the project root for full license information.
+// Licensed to the .NET Foundation under one or more agreements.
+// The .NET Foundation licenses this file to you under the MIT license.
+// See the LICENSE file in the project root for more information.
 
 using Xunit;
 
@@ -11,6 +12,13 @@ namespace System.Security.Cryptography.Hashing.Algorithms.Tests
         {
             return new HMACSHA512();
         }
+
+        protected override HashAlgorithm CreateHashAlgorithm()
+        {
+            return SHA512.Create();
+        }
+
+        protected override int BlockSize { get { return 128; } }
 
         [Fact]
         public void HmacSha512_Rfc4231_1()
@@ -53,6 +61,12 @@ namespace System.Security.Cryptography.Hashing.Algorithms.Tests
         public void HmacSha512_Rfc4231_7()
         {
             VerifyHmac(7, "e37b6a775dc87dbaa4dfa9f96e5e3ffddebd71f8867289865df5a32d20cdc944b6022cac3c4982b10d5eeb55c3e4de15134676fb6de0446065c97440fa8c6a58");
+        }
+
+        [Fact]
+        public void HMacSha512_Rfc2104_2()
+        {
+            VerifyHmacRfc2104_2();
         }
     }
 }

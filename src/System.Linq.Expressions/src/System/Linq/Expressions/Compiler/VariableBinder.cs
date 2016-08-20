@@ -1,5 +1,6 @@
-﻿// Copyright (c) Microsoft. All rights reserved.
-// Licensed under the MIT license. See LICENSE file in the project root for full license information.
+// Licensed to the .NET Foundation under one or more agreements.
+// The .NET Foundation licenses this file to you under the MIT license.
+// See the LICENSE file in the project root for more information.
 
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
@@ -82,12 +83,15 @@ namespace System.Linq.Expressions.Compiler
             // optimization: inline code for literal lambda's directly
             if (lambda != null)
             {
-                // visit the lambda, but treat it more like a scope
-                _scopes.Push(_tree.Scopes[lambda] = new CompilerScope(lambda, false));
+                // visit the lambda, but treat it like a scope associated with invocation
+                _scopes.Push(_tree.Scopes[node] = new CompilerScope(lambda, false));
                 Visit(MergeScopes(lambda));
                 _scopes.Pop();
                 // visit the invoke's arguments
-                Visit(node.Arguments);
+                for (int i = 0, n = node.ArgumentCount; i < n; i++)
+                {
+                    Visit(node.GetArgument(i));
+                }
                 return node;
             }
 
@@ -159,7 +163,7 @@ namespace System.Linq.Expressions.Compiler
                     // Otherwise, merge it
                     if (currentScope.MergedScopes == null)
                     {
-                        currentScope.MergedScopes = new Set<object>(ReferenceEqualityComparer<object>.Instance);
+                        currentScope.MergedScopes = new HashSet<BlockExpression>(ReferenceEqualityComparer<object>.Instance);
                     }
                     currentScope.MergedScopes.Add(block);
                     foreach (var v in block.Variables)

@@ -1,5 +1,6 @@
-// Copyright (c) Microsoft. All rights reserved.
-// Licensed under the MIT license. See LICENSE file in the project root for full license information.
+// Licensed to the .NET Foundation under one or more agreements.
+// The .NET Foundation licenses this file to you under the MIT license.
+// See the LICENSE file in the project root for more information.
 
 using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
@@ -19,9 +20,9 @@ namespace System.IO.Pipes
         internal static string GetPipePath(string serverName, string pipeName)
         {
             string normalizedPipePath = Path.GetFullPath(@"\\" + serverName + @"\pipe\" + pipeName);
-            if (String.Equals(normalizedPipePath, @"\\.\pipe\anonymous", StringComparison.OrdinalIgnoreCase))
+            if (String.Equals(normalizedPipePath, @"\\.\pipe\" + AnonymousPipeName, StringComparison.OrdinalIgnoreCase))
             {
-                throw new ArgumentOutOfRangeException("pipeName", SR.ArgumentOutOfRange_AnonymousReserved);
+                throw new ArgumentOutOfRangeException(nameof(pipeName), SR.ArgumentOutOfRange_AnonymousReserved);
             }
             return normalizedPipePath;
         }
@@ -187,7 +188,7 @@ namespace System.IO.Pipes
             CheckWriteOperations();
             if (!CanWrite)
             {
-                throw __Error.GetWriteNotSupported();
+                throw Error.GetWriteNotSupported();
             }
 
             // Block until other end of the pipe has read everything.
@@ -312,7 +313,7 @@ namespace System.IO.Pipes
                 CheckPipePropertyOperations();
                 if (value < PipeTransmissionMode.Byte || value > PipeTransmissionMode.Message)
                 {
-                    throw new ArgumentOutOfRangeException("value", SR.ArgumentOutOfRange_TransmissionModeByteOrMsg);
+                    throw new ArgumentOutOfRangeException(nameof(value), SR.ArgumentOutOfRange_TransmissionModeByteOrMsg);
                 }
 
                 unsafe
@@ -428,14 +429,14 @@ namespace System.IO.Pipes
         }
 
         [SecurityCritical]
-        internal static Interop.mincore.SECURITY_ATTRIBUTES GetSecAttrs(HandleInheritability inheritability)
+        internal unsafe static Interop.mincore.SECURITY_ATTRIBUTES GetSecAttrs(HandleInheritability inheritability)
         {
             Interop.mincore.SECURITY_ATTRIBUTES secAttrs = default(Interop.mincore.SECURITY_ATTRIBUTES);
             if ((inheritability & HandleInheritability.Inheritable) != 0)
             {
                 secAttrs = new Interop.mincore.SECURITY_ATTRIBUTES();
-                secAttrs.nLength = (uint)Marshal.SizeOf(secAttrs);
-                secAttrs.bInheritHandle = true;
+                secAttrs.nLength = (uint)sizeof(Interop.mincore.SECURITY_ATTRIBUTES);
+                secAttrs.bInheritHandle = Interop.BOOL.TRUE;
             }
             return secAttrs;
         }
@@ -464,7 +465,7 @@ namespace System.IO.Pipes
         }
 
         /// <summary>
-        /// Filter out all pipe related errors and do some cleanup before calling __Error.WinIOError.
+        /// Filter out all pipe related errors and do some cleanup before calling Error.WinIOError.
         /// </summary>
         /// <param name="errorCode"></param>
         [SecurityCritical]
@@ -480,7 +481,7 @@ namespace System.IO.Pipes
                     return new IOException(SR.IO_PipeBroken, Win32Marshal.MakeHRFromErrorCode(errorCode));
 
                 case Interop.mincore.Errors.ERROR_HANDLE_EOF:
-                    return __Error.GetEndOfFile();
+                    return Error.GetEndOfFile();
 
                 case Interop.mincore.Errors.ERROR_INVALID_HANDLE:
                     // For invalid handles, detect the error and mark our handle

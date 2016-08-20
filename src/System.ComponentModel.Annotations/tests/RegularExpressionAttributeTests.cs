@@ -1,5 +1,6 @@
-﻿// Copyright (c) Microsoft. All rights reserved.
-// Licensed under the MIT license. See LICENSE file in the project root for full license information.
+// Licensed to the .NET Foundation under one or more agreements.
+// The .NET Foundation licenses this file to you under the MIT license.
+// See the LICENSE file in the project root for more information.
 
 using Xunit;
 
@@ -14,6 +15,14 @@ namespace System.ComponentModel.DataAnnotations
         {
             var attribute = new RegularExpressionAttribute("SomePattern");
             Assert.Equal("SomePattern", attribute.Pattern);
+        }
+
+        [Fact]
+        public static void Can_set_and_get_MatchTimeout()
+        {
+            var attribute = new RegularExpressionAttribute("SomePattern");
+            attribute.MatchTimeoutInMilliseconds = 12345;
+            Assert.Equal(12345, attribute.MatchTimeoutInMilliseconds);
         }
 
         [Fact]
@@ -42,9 +51,11 @@ namespace System.ComponentModel.DataAnnotations
         public static void Validate_successful_for_value_matching_pattern()
         {
             var attribute = new RegularExpressionAttribute("defghi");
+            attribute.MatchTimeoutInMilliseconds = 5000; // note: timeout is just a number much larger than we expect the test to take
             AssertEx.DoesNotThrow(() => attribute.Validate("defghi", s_testValidationContext));
 
             attribute = new RegularExpressionAttribute("[^a]+\\.[^z]+");
+            attribute.MatchTimeoutInMilliseconds = 10000; // note: timeout is just a number much larger than we expect the test to take
             AssertEx.DoesNotThrow(() => attribute.Validate("bcdefghijklmnopqrstuvwxyz.abcdefghijklmnopqrstuvwxy", s_testValidationContext));
         }
 
@@ -58,6 +69,7 @@ namespace System.ComponentModel.DataAnnotations
             Assert.Throws<ValidationException>(() => attribute.Validate("abcdefghijkl", s_testValidationContext)); // pattern only matches part of value
 
             attribute = new RegularExpressionAttribute("[^a]+\\.[^z]+");
+            attribute.MatchTimeoutInMilliseconds = 10000; // note: timeout is just a number much larger than we expect the test to take
             Assert.Throws<ValidationException>(() => attribute.Validate("aaaaa", s_testValidationContext));
             Assert.Throws<ValidationException>(() => attribute.Validate("zzzzz", s_testValidationContext));
             Assert.Throws<ValidationException>(() => attribute.Validate("b.z", s_testValidationContext));

@@ -1,5 +1,6 @@
-// Copyright (c) Microsoft. All rights reserved.
-// Licensed under the MIT license. See LICENSE file in the project root for full license information.
+// Licensed to the .NET Foundation under one or more agreements.
+// The .NET Foundation licenses this file to you under the MIT license.
+// See the LICENSE file in the project root for more information.
 
 using System;
 using System.IO;
@@ -345,19 +346,19 @@ namespace System.Xml
             // check arguments
             if (buffer == null)
             {
-                throw new ArgumentNullException("buffer");
+                throw new ArgumentNullException(nameof(buffer));
             }
             if (count < 0)
             {
-                throw new ArgumentOutOfRangeException("count");
+                throw new ArgumentOutOfRangeException(nameof(count));
             }
             if (index < 0)
             {
-                throw new ArgumentOutOfRangeException("index");
+                throw new ArgumentOutOfRangeException(nameof(index));
             }
             if (buffer.Length - index < count)
             {
-                throw new ArgumentOutOfRangeException("count");
+                throw new ArgumentOutOfRangeException(nameof(count));
             }
 
             // if not the first call to ReadContentAsBase64 
@@ -414,19 +415,19 @@ namespace System.Xml
             // check arguments
             if (buffer == null)
             {
-                throw new ArgumentNullException("buffer");
+                throw new ArgumentNullException(nameof(buffer));
             }
             if (count < 0)
             {
-                throw new ArgumentOutOfRangeException("count");
+                throw new ArgumentOutOfRangeException(nameof(count));
             }
             if (index < 0)
             {
-                throw new ArgumentOutOfRangeException("index");
+                throw new ArgumentOutOfRangeException(nameof(index));
             }
             if (buffer.Length - index < count)
             {
-                throw new ArgumentOutOfRangeException("count");
+                throw new ArgumentOutOfRangeException(nameof(count));
             }
 
             // if not the first call to ReadContentAsBinHex 
@@ -492,19 +493,19 @@ namespace System.Xml
             // check arguments
             if (buffer == null)
             {
-                throw new ArgumentNullException("buffer");
+                throw new ArgumentNullException(nameof(buffer));
             }
             if (count < 0)
             {
-                throw new ArgumentOutOfRangeException("count");
+                throw new ArgumentOutOfRangeException(nameof(count));
             }
             if (index < 0)
             {
-                throw new ArgumentOutOfRangeException("index");
+                throw new ArgumentOutOfRangeException(nameof(index));
             }
             if (buffer.Length - index < count)
             {
-                throw new ArgumentOutOfRangeException("count");
+                throw new ArgumentOutOfRangeException(nameof(count));
             }
 
             // if not the first call to ReadContentAsBase64 
@@ -561,19 +562,19 @@ namespace System.Xml
             // check arguments
             if (buffer == null)
             {
-                throw new ArgumentNullException("buffer");
+                throw new ArgumentNullException(nameof(buffer));
             }
             if (count < 0)
             {
-                throw new ArgumentOutOfRangeException("count");
+                throw new ArgumentOutOfRangeException(nameof(count));
             }
             if (index < 0)
             {
-                throw new ArgumentOutOfRangeException("index");
+                throw new ArgumentOutOfRangeException(nameof(index));
             }
             if (buffer.Length - index < count)
             {
-                throw new ArgumentOutOfRangeException("count");
+                throw new ArgumentOutOfRangeException(nameof(count));
             }
 
             // if not the first call to ReadContentAsBinHex 
@@ -626,19 +627,19 @@ namespace System.Xml
             // check arguments
             if (buffer == null)
             {
-                throw new ArgumentNullException("buffer");
+                throw new ArgumentNullException(nameof(buffer));
             }
             if (count < 0)
             {
-                throw new ArgumentOutOfRangeException("count");
+                throw new ArgumentOutOfRangeException(nameof(count));
             }
             if (index < 0)
             {
-                throw new ArgumentOutOfRangeException("index");
+                throw new ArgumentOutOfRangeException(nameof(index));
             }
             if (buffer.Length - index < count)
             {
-                throw new ArgumentOutOfRangeException("count");
+                throw new ArgumentOutOfRangeException(nameof(count));
             }
 
             // first call of ReadValueChunk -> initialize incremental read state
@@ -971,7 +972,7 @@ namespace System.Xml
 
         private Task SwitchEncodingToUTF8Async()
         {
-            return SwitchEncodingAsync(new UTF8Encoding(true, true));
+            return SwitchEncodingAsync(UTF8BomThrowing);
         }
 
         // Reads more data to the character buffer, discarding already parsed chars / decoded bytes.
@@ -1135,7 +1136,7 @@ namespace System.Xml
                 }
             }
 
-            if (!XmlConvert.StrEqual(_ps.chars, _ps.charPos, 5, XmlDeclarationBegining) ||
+            if (!XmlConvert.StrEqual(_ps.chars, _ps.charPos, 5, XmlDeclarationBeginning) ||
                  _xmlCharType.IsNameSingleChar(_ps.chars[_ps.charPos + 5])
 #if XML10_FIFTH_EDITION
                  || xmlCharType.IsNCNameHighSurrogateChar(ps.chars[ps.charPos + 5])
@@ -2657,7 +2658,7 @@ namespace System.Xml
                         case '<':
                             Throw(pos, SR.Xml_BadAttributeChar, XmlException.BuildCharExceptionArgs('<', '\0'));
                             break;
-                        // entity referece
+                        // entity reference
                         case '&':
                             if (pos - _ps.charPos > 0)
                             {
@@ -2769,9 +2770,9 @@ namespace System.Xml
 
             // the whole value is in buffer
 
-            TaskValue<ValueTuple<int, int, int, bool>> parseTextTask = ParseTextAsync(orChars);
+            ValueTask<ValueTuple<int, int, int, bool>> parseTextTask = ParseTextAsync(orChars);
             bool fullValue = false;
-            if (!parseTextTask.IsRanToCompletion)
+            if (!parseTextTask.IsCompletedSuccessfully)
             {
                 return _ParseTextAsync(parseTextTask.AsTask());
             }
@@ -3023,14 +3024,14 @@ namespace System.Xml
         private Task<ValueTuple<int, int, int, bool>> _parseText_dummyTask = Task.FromResult(new ValueTuple<int, int, int, bool>(0, 0, 0, false));
 
         //To avoid stackoverflow like ParseText->ParseEntity->ParText->..., use a loop and parsing function to implement such call.
-        private TaskValue<ValueTuple<int, int, int, bool>> ParseTextAsync(int outOrChars)
+        private ValueTask<ValueTuple<int, int, int, bool>> ParseTextAsync(int outOrChars)
         {
             Task<ValueTuple<int, int, int, bool>> task = ParseTextAsync(outOrChars, _ps.chars, _ps.charPos, 0, -1, outOrChars, (char)0);
             while (true)
             {
                 if (!task.IsSuccess())
                 {
-                    return ParseTextAsync_AsyncFunc(task);
+                    return new ValueTask<ValueTuple<int, int, int, bool>>(ParseTextAsync_AsyncFunc(task));
                 }
 
                 outOrChars = _lastParseTextState.outOrChars;
@@ -3056,9 +3057,9 @@ namespace System.Xml
                         task = ParseTextAsync_Surrogate(outOrChars, chars, pos, rcount, rpos, orChars, c);
                         break;
                     case ParseTextFunction.NoValue:
-                        return ParseTextAsync_NoValue(outOrChars, pos);
+                        return new ValueTask<ValueTuple<int, int, int, bool>>(ParseText_NoValue(outOrChars, pos));
                     case ParseTextFunction.PartialValue:
-                        return ParseTextAsync_PartialValue(pos, rcount, rpos, orChars, c);
+                        return new ValueTask<ValueTuple<int, int, int, bool>>(ParseText_PartialValue(pos, rcount, rpos, orChars, c));
                 }
             }
         }
@@ -3092,9 +3093,9 @@ namespace System.Xml
                         task = ParseTextAsync_Surrogate(outOrChars, chars, pos, rcount, rpos, orChars, c);
                         break;
                     case ParseTextFunction.NoValue:
-                        return await ParseTextAsync_NoValue(outOrChars, pos).ConfigureAwait(false);
+                        return ParseText_NoValue(outOrChars, pos);
                     case ParseTextFunction.PartialValue:
-                        return await ParseTextAsync_PartialValue(pos, rcount, rpos, orChars, c);
+                        return ParseText_PartialValue(pos, rcount, rpos, orChars, c);
                 }
             }
         }
@@ -3341,12 +3342,12 @@ namespace System.Xml
             return _parseText_dummyTask.Result;
         }
 
-        private Task<ValueTuple<int, int, int, bool>> ParseTextAsync_NoValue(int outOrChars, int pos)
+        private ValueTuple<int, int, int, bool> ParseText_NoValue(int outOrChars, int pos)
         {
-            return Task.FromResult(new ValueTuple<int, int, int, bool>(pos, pos, outOrChars, true));
+            return new ValueTuple<int, int, int, bool>(pos, pos, outOrChars, true);
         }
 
-        private TaskValue<ValueTuple<int, int, int, bool>> ParseTextAsync_PartialValue(int pos, int rcount, int rpos, int orChars, char c)
+        private ValueTuple<int, int, int, bool> ParseText_PartialValue(int pos, int rcount, int rpos, int orChars, char c)
         {
             if (_parsingMode == ParsingMode.Full && rcount > 0)
             {
@@ -4008,7 +4009,7 @@ namespace System.Xml
                     pos++;
                 }
 
-                // posibbly end of comment or cdata section
+                // possibly end of comment or cdata section
                 if (chars[pos] == stopChar)
                 {
                     if (chars[pos + 1] == stopChar)

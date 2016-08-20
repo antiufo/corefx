@@ -1,5 +1,6 @@
-// Copyright (c) Microsoft. All rights reserved.
-// Licensed under the MIT license. See LICENSE file in the project root for full license information.
+// Licensed to the .NET Foundation under one or more agreements.
+// The .NET Foundation licenses this file to you under the MIT license.
+// See the LICENSE file in the project root for more information.
 
 using System;
 using System.Collections.Generic;
@@ -161,11 +162,12 @@ namespace System.Linq.Expressions
         /// <returns>A <see cref="NewExpression"/> that has the <see cref="NodeType"/> property equal to <see cref="P:New"/> and the <see cref="P:Constructor"/> and <see cref="P:Arguments"/> properties set to the specified value.</returns>
         public static NewExpression New(ConstructorInfo constructor, IEnumerable<Expression> arguments)
         {
-            ContractUtils.RequiresNotNull(constructor, "constructor");
-            ContractUtils.RequiresNotNull(constructor.DeclaringType, "constructor.DeclaringType");
-            TypeUtils.ValidateType(constructor.DeclaringType);
+            ContractUtils.RequiresNotNull(constructor, nameof(constructor));
+            ContractUtils.RequiresNotNull(constructor.DeclaringType, nameof(constructor) + "." + nameof(constructor.DeclaringType));
+            TypeUtils.ValidateType(constructor.DeclaringType, nameof(constructor));
+            ValidateConstructor(constructor, nameof(constructor));
             var argList = arguments.ToReadOnly();
-            ValidateArgumentTypes(constructor, ExpressionType.New, ref argList);
+            ValidateArgumentTypes(constructor, ExpressionType.New, ref argList, nameof(constructor));
 
             return new NewExpression(constructor, argList, null);
         }
@@ -180,7 +182,8 @@ namespace System.Linq.Expressions
         /// <returns>A <see cref="NewExpression"/> that has the <see cref="NodeType"/> property equal to <see cref="P:New"/> and the <see cref="P:Constructor"/>, <see cref="P:Arguments"/> and <see cref="P:Members"/> properties set to the specified value.</returns>
         public static NewExpression New(ConstructorInfo constructor, IEnumerable<Expression> arguments, IEnumerable<MemberInfo> members)
         {
-            ContractUtils.RequiresNotNull(constructor, "constructor");
+            ContractUtils.RequiresNotNull(constructor, nameof(constructor));
+            ValidateConstructor(constructor, nameof(constructor));
             var memberList = members.ToReadOnly();
             var argList = arguments.ToReadOnly();
             ValidateNewArgs(constructor, ref argList, ref memberList);
@@ -208,10 +211,10 @@ namespace System.Linq.Expressions
         /// <returns>A <see cref="NewExpression"/> that has the <see cref="NodeType"/> property equal to New and the Constructor property set to the ConstructorInfo that represents the parameterless constructor of the specified type.</returns>
         public static NewExpression New(Type type)
         {
-            ContractUtils.RequiresNotNull(type, "type");
+            ContractUtils.RequiresNotNull(type, nameof(type));
             if (type == typeof(void))
             {
-                throw Error.ArgumentCannotBeOfTypeVoid();
+                throw Error.ArgumentCannotBeOfTypeVoid(nameof(type));
             }
             ConstructorInfo ci = null;
             if (!type.GetTypeInfo().IsValueType)
@@ -219,7 +222,7 @@ namespace System.Linq.Expressions
                 ci = type.GetConstructors(BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic).Where(c => c.GetParameters().Length == 0).SingleOrDefault();
                 if (ci == null)
                 {
-                    throw Error.TypeMissingDefaultConstructor(type);
+                    throw Error.TypeMissingDefaultConstructor(type, nameof(type));
                 }
                 return New(ci);
             }
@@ -247,15 +250,15 @@ namespace System.Linq.Expressions
                 for (int i = 0, n = arguments.Count; i < n; i++)
                 {
                     Expression arg = arguments[i];
-                    RequiresCanRead(arg, "argument");
+                    RequiresCanRead(arg, nameof(arguments));
                     MemberInfo member = members[i];
-                    ContractUtils.RequiresNotNull(member, "member");
+                    ContractUtils.RequiresNotNull(member, nameof(members));
                     if (!TypeUtils.AreEquivalent(member.DeclaringType, constructor.DeclaringType))
                     {
-                        throw Error.ArgumentMemberNotDeclOnType(member.Name, constructor.DeclaringType.Name);
+                        throw Error.ArgumentMemberNotDeclOnType(member.Name, constructor.DeclaringType.Name, nameof(members));
                     }
                     Type memberType;
-                    ValidateAnonymousTypeMember(ref member, out memberType);
+                    ValidateAnonymousTypeMember(ref member, out memberType, nameof(members));
                     if (!TypeUtils.AreReferenceAssignable(memberType, arg.Type))
                     {
                         if (!TryQuote(memberType, ref arg))
@@ -273,7 +276,7 @@ namespace System.Linq.Expressions
                     {
                         if (!TryQuote(pType, ref arg))
                         {
-                            throw Error.ExpressionTypeDoesNotMatchConstructorParameter(arg.Type, pType);
+                            throw Error.ExpressionTypeDoesNotMatchConstructorParameter(arg.Type, pType, nameof(arguments));
                         }
                     }
                     if (newArguments == null && arg != arguments[i])
@@ -322,14 +325,14 @@ namespace System.Linq.Expressions
         }
 
 
-        private static void ValidateAnonymousTypeMember(ref MemberInfo member, out Type memberType)
+        private static void ValidateAnonymousTypeMember(ref MemberInfo member, out Type memberType, string paramName)
         {
             FieldInfo field = member as FieldInfo;
             if (field != null)
             {
                 if (field.IsStatic)
                 {
-                    throw Error.ArgumentMustBeInstanceMember();
+                    throw Error.ArgumentMustBeInstanceMember(paramName);
                 }
                 memberType = field.FieldType;
                 return;
@@ -340,11 +343,11 @@ namespace System.Linq.Expressions
             {
                 if (!pi.CanRead)
                 {
-                    throw Error.PropertyDoesNotHaveGetter(pi);
+                    throw Error.PropertyDoesNotHaveGetter(pi, paramName);
                 }
                 if (pi.GetGetMethod().IsStatic)
                 {
-                    throw Error.ArgumentMustBeInstanceMember();
+                    throw Error.ArgumentMustBeInstanceMember(paramName);
                 }
                 memberType = pi.PropertyType;
                 return;
@@ -355,15 +358,21 @@ namespace System.Linq.Expressions
             {
                 if (method.IsStatic)
                 {
-                    throw Error.ArgumentMustBeInstanceMember();
+                    throw Error.ArgumentMustBeInstanceMember(paramName);
                 }
 
-                PropertyInfo prop = GetProperty(method);
+                PropertyInfo prop = GetProperty(method, paramName);
                 member = prop;
                 memberType = prop.PropertyType;
                 return;
             }
-            throw Error.ArgumentMustBeFieldInfoOrPropertInfoOrMethod();
+            throw Error.ArgumentMustBeFieldInfoOrPropertyInfoOrMethod(paramName);
+        }
+
+        private static void ValidateConstructor(ConstructorInfo constructor, string paramName)
+        {
+            if (constructor.IsStatic)
+                throw Error.NonStaticConstructorRequired(paramName);
         }
     }
 }

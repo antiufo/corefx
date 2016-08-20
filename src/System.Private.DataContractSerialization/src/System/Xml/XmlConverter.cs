@@ -1,5 +1,6 @@
-﻿// Copyright (c) Microsoft. All rights reserved.
-// Licensed under the MIT license. See LICENSE file in the project root for full license information.
+// Licensed to the .NET Foundation under one or more agreements.
+// The .NET Foundation licenses this file to you under the MIT license.
+// See the LICENSE file in the project root for more information.
 
 using System;
 using System.IO;
@@ -638,7 +639,7 @@ namespace System.Xml
                 value = value * 10 + ch;
                 offset++;
             }
-            // Ten digits w/out a decimal point might've overflowed the int
+            // Ten digits w/out a decimal point might have overflowed the int
             if (count == 10)
                 return false;
             if (negative)
@@ -690,7 +691,7 @@ namespace System.Xml
                 value = value * 10 + ch;
                 offset++;
             }
-            // Ten digits w/out a decimal point might've overflowed the int
+            // Ten digits w/out a decimal point might have overflowed the int
             if (count == 10)
                 return false;
             if (negative)
@@ -700,7 +701,6 @@ namespace System.Xml
             return true;
         }
 
-#if NET_NATIVE || MERGE_DCJS
         static public int ToChars(int value, byte[] chars, int offset)
         {
             int count = ToCharsR(value, chars, offset + MaxInt32Chars);
@@ -850,7 +850,6 @@ namespace System.Xml
                 return 5;
             }
         }
-#endif
 
         private static int ToInt32D2(byte[] chars, int offset)
         {

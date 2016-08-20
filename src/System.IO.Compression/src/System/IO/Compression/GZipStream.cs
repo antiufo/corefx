@@ -1,7 +1,9 @@
-// Copyright (c) Microsoft. All rights reserved.
-// Licensed under the MIT license. See LICENSE file in the project root for full license information.
+// Licensed to the .NET Foundation under one or more agreements.
+// The .NET Foundation licenses this file to you under the MIT license.
+// See the LICENSE file in the project root for more information.
 
 using System.IO;
+using System.Runtime.CompilerServices;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -11,41 +13,24 @@ namespace System.IO.Compression
     {
         private DeflateStream _deflateStream;
 
-
-        public GZipStream(Stream stream, CompressionMode mode)
-
-            : this(stream, mode, false)
+        public GZipStream(Stream stream, CompressionMode mode): this(stream, mode, false)
         {
         }
-
 
         public GZipStream(Stream stream, CompressionMode mode, bool leaveOpen)
         {
-            if (mode == CompressionMode.Decompress)
-            {
-                _deflateStream = new DeflateStream(stream, leaveOpen, new GZipDecoder());
-            }
-            else
-            {
-                _deflateStream = new DeflateStream(stream, mode, leaveOpen);
-                _deflateStream.SetFileFormatWriter(new GZipFormatter());
-            }
+             _deflateStream = new DeflateStream(stream, mode, leaveOpen, ZLibNative.GZip_DefaultWindowBits);
         }
-
 
         // Implies mode = Compress
-        public GZipStream(Stream stream, CompressionLevel compressionLevel)
-
-            : this(stream, compressionLevel, false)
+        public GZipStream(Stream stream, CompressionLevel compressionLevel): this(stream, compressionLevel, false)
         {
         }
-
 
         // Implies mode = Compress
         public GZipStream(Stream stream, CompressionLevel compressionLevel, bool leaveOpen)
         {
-            _deflateStream = new DeflateStream(stream, compressionLevel, leaveOpen);
-            _deflateStream.SetFileFormatWriter(new GZipFormatter());
+            _deflateStream = new DeflateStream(stream, compressionLevel, leaveOpen, ZLibNative.GZip_DefaultWindowBits);
         }
 
         public override bool CanRead
@@ -125,6 +110,12 @@ namespace System.IO.Compression
             throw new NotSupportedException(SR.NotSupported);
         }
 
+        public override int ReadByte()
+        {
+            CheckDeflateStream();
+            return _deflateStream.ReadByte();
+        }
+
         public override int Read(byte[] array, int offset, int count)
         {
             CheckDeflateStream();
@@ -190,8 +181,14 @@ namespace System.IO.Compression
         {
             if (_deflateStream == null)
             {
-                throw new ObjectDisposedException(null, SR.ObjectDisposed_StreamClosed);
+                ThrowStreamClosedException();
             }
+        }
+
+        [MethodImpl(MethodImplOptions.NoInlining)]
+        private static void ThrowStreamClosedException()
+        {
+            throw new ObjectDisposedException(null, SR.ObjectDisposed_StreamClosed);
         }
     }
 }

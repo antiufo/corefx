@@ -1,11 +1,10 @@
-// Copyright (c) Microsoft. All rights reserved.
-// Licensed under the MIT license. See LICENSE file in the project root for full license information.
+// Licensed to the .NET Foundation under one or more agreements.
+// The .NET Foundation licenses this file to you under the MIT license.
+// See the LICENSE file in the project root for more information.
 
-using System;
-using System.Reflection;
 using Xunit;
 
-namespace System.Reflection.Compatibility.UnitTests.MemberInfoTests
+namespace System.Reflection.Tests
 {
     // MemberInfo.MemberType Property  
     // When overridden in a derived class, gets a MemberTypes value indicating 
@@ -161,7 +160,7 @@ namespace System.Reflection.Compatibility.UnitTests.MemberInfoTests
         {
             private static int s_count = 0;
 
-            //Defualt constructor
+            //Default constructor
             public TestClass1()
             {
                 ++s_count;

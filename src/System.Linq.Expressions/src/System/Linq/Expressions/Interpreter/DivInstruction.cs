@@ -1,5 +1,6 @@
-// Copyright (c) Microsoft. All rights reserved.
-// Licensed under the MIT license. See LICENSE file in the project root for full license information.
+// Licensed to the .NET Foundation under one or more agreements.
+// The .NET Foundation licenses this file to you under the MIT license.
+// See the LICENSE file in the project root for more information.
 
 using System;
 using System.Diagnostics;
@@ -10,7 +11,7 @@ namespace System.Linq.Expressions.Interpreter
 {
     internal abstract class DivInstruction : Instruction
     {
-        private static Instruction s_int16,s_int32,s_int64,s_UInt16,s_UInt32,s_UInt64,s_single,s_double;
+        private static Instruction s_int16, s_int32, s_int64, s_UInt16, s_UInt32, s_UInt64, s_single, s_double;
 
         public override int ConsumedStack { get { return 2; } }
         public override int ProducedStack { get { return 1; } }
@@ -193,16 +194,11 @@ namespace System.Linq.Expressions.Interpreter
                     throw Error.ExpressionNotSupportedForType("Div", type);
             }
         }
-
-        public override string ToString()
-        {
-            return "Div()";
-        }
     }
 
     internal abstract class ModuloInstruction : Instruction
     {
-        private static Instruction s_int16,s_int32,s_int64,s_UInt16,s_UInt32,s_UInt64,s_single,s_double;
+        private static Instruction s_int16, s_int32, s_int64, s_UInt16, s_UInt32, s_UInt64, s_single, s_double;
 
         public override int ConsumedStack { get { return 2; } }
         public override int ProducedStack { get { return 1; } }
@@ -384,11 +380,6 @@ namespace System.Linq.Expressions.Interpreter
                 default:
                     throw Error.ExpressionNotSupportedForType("Modulo", type);
             }
-        }
-
-        public override string ToString()
-        {
-            return "Modulo()";
         }
     }
 }

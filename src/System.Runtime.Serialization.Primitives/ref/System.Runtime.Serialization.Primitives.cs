@@ -1,5 +1,6 @@
-// Copyright (c) Microsoft. All rights reserved.
-// Licensed under the MIT license. See LICENSE file in the project root for full license information.
+// Licensed to the .NET Foundation under one or more agreements.
+// The .NET Foundation licenses this file to you under the MIT license.
+// See the LICENSE file in the project root for more information.
 // ------------------------------------------------------------------------------
 // Changes to this file must follow the http://aka.ms/api-review process.
 // ------------------------------------------------------------------------------
@@ -69,6 +70,12 @@ namespace System.Runtime.Serialization
         public InvalidDataContractException() { }
         public InvalidDataContractException(string message) { }
         public InvalidDataContractException(string message, System.Exception innerException) { }
+    }
+    public partial interface ISerializationSurrogateProvider
+    {
+        object GetDeserializedObject(object obj, System.Type targetType);
+        object GetObjectToSerialize(object obj, System.Type targetType);
+        System.Type GetSurrogateType(System.Type type);
     }
     [System.AttributeUsageAttribute((System.AttributeTargets)(12), Inherited = true, AllowMultiple = true)]
     public sealed partial class KnownTypeAttribute : System.Attribute

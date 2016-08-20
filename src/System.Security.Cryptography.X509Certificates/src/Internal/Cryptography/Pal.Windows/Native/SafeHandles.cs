@@ -1,10 +1,12 @@
-// Copyright (c) Microsoft. All rights reserved.
-// Licensed under the MIT license. See LICENSE file in the project root for full license information.
+// Licensed to the .NET Foundation under one or more agreements.
+// The .NET Foundation licenses this file to you under the MIT license.
+// See the LICENSE file in the project root for more information.
 
 using Microsoft.Win32.SafeHandles;
 using System;
 using System.Diagnostics;
 using System.Runtime.InteropServices;
+using System.Security.Cryptography;
 
 namespace Internal.Cryptography.Pal.Native
 {
@@ -111,13 +113,40 @@ namespace Internal.Cryptography.Pal.Native
                 fixed (byte* pProvInfoAsBytes = provInfoAsBytes)
                 {
                     CRYPT_KEY_PROV_INFO* pProvInfo = (CRYPT_KEY_PROV_INFO*)pProvInfoAsBytes;
-                    CryptAcquireContextFlags flags = (pProvInfo->dwFlags & CryptAcquireContextFlags.CRYPT_MACHINE_KEYSET) | CryptAcquireContextFlags.CRYPT_DELETEKEYSET;
-                    IntPtr hProv;
-                    bool success = Interop.advapi32.CryptAcquireContext(out hProv, pProvInfo->pwszContainerName, pProvInfo->pwszProvName, pProvInfo->dwProvType, flags);
 
-                    // Called CryptAcquireContext solely for the side effect of deleting the key containers. When called with these flags, no actual
-                    // hProv is returned (so there's nothing to clean up.)
-                    Debug.Assert(hProv == IntPtr.Zero);
+                    if (pProvInfo->dwProvType == 0)
+                    {
+                        // dwProvType being 0 indicates that the key is stored in CNG.
+                        // dwProvType being non-zero indicates that the key is stored in CAPI.
+                            
+                        string providerName = Marshal.PtrToStringUni((IntPtr)(pProvInfo->pwszProvName));
+                        string keyContainerName = Marshal.PtrToStringUni((IntPtr)(pProvInfo->pwszContainerName));
+
+                        try
+                        {
+                            using (CngKey cngKey = CngKey.Open(keyContainerName, new CngProvider(providerName)))
+                            {
+                                cngKey.Delete();
+                            }
+                        }
+                        catch (CryptographicException)
+                        {
+                            // While leaving the file on disk is undesirable, an inability to perform this cleanup
+                            // should not manifest itself to a user.
+                        }
+                    }
+                    else
+                    {
+#if !NETNATIVE // For UWP, CryptAcquireContext() is a disallowed api, even when being used for cleanup. CAPI keys should not exist on that platform, however...
+                        CryptAcquireContextFlags flags = (pProvInfo->dwFlags & CryptAcquireContextFlags.CRYPT_MACHINE_KEYSET) | CryptAcquireContextFlags.CRYPT_DELETEKEYSET;
+                        IntPtr hProv;
+                        bool success = Interop.cryptoapi.CryptAcquireContext(out hProv, pProvInfo->pwszContainerName, pProvInfo->pwszProvName, pProvInfo->dwProvType, flags);
+
+                        // Called CryptAcquireContext solely for the side effect of deleting the key containers. When called with these flags, no actual
+                        // hProv is returned (so there's nothing to clean up.)
+                        Debug.Assert(hProv == IntPtr.Zero);
+#endif
+                    }
                 }
             }
         }

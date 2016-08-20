@@ -1,13 +1,9 @@
-// Copyright (c) Microsoft. All rights reserved.
-// Licensed under the MIT license. See LICENSE file in the project root for full license information.
+// Licensed to the .NET Foundation under one or more agreements.
+// The .NET Foundation licenses this file to you under the MIT license.
+// See the LICENSE file in the project root for more information.
 
-using System;
-using System.Text;
-using System.Net.Mime;
-using System.Globalization;
-using System.Collections;
 using System.Diagnostics;
-using System.Collections.Generic;
+using System.Net.Mime;
 
 namespace System.Net.Mail
 {
@@ -32,24 +28,6 @@ namespace System.Net.Mail
             MailAddress parsedAddress = MailAddressParser.ParseAddress(data, false, ref index);
             Debug.Assert(index == -1, "The index indicates that part of the address was not parsed: " + index);
             return parsedAddress;
-        }
-
-        // Parse a comma separated list of MailAddress's
-        //
-        // Throws a FormatException if any MailAddress is invalid.
-        internal static IList<MailAddress> ParseMultipleAddresses(string data)
-        {
-            IList<MailAddress> results = new List<MailAddress>();
-            int index = data.Length - 1;
-            while (index >= 0)
-            {
-                // Because we're parsing in reverse, we must make an effort to preserve the order of the addresses.
-                results.Insert(0, MailAddressParser.ParseAddress(data, true, ref index));
-                Debug.Assert(index == -1 || data[index] == MailBnfHelper.Comma,
-                    "separator not found while parsing multiple addresses");
-                index--;
-            }
-            return results;
         }
 
         //
@@ -222,7 +200,7 @@ namespace System.Net.Mail
                 // before the next address.
                 if (index >= 0 &&
                         !(
-                            MailBnfHelper.Whitespace.Contains(data[index]) // < local@domain >
+                            MailBnfHelper.IsAllowedWhiteSpace(data[index]) // < local@domain >
                             || data[index] == MailBnfHelper.EndComment // <(comment)local@domain>
                             || (expectAngleBracket && data[index] == MailBnfHelper.StartAngleBracket) // <local@domain>
                             || (expectMultipleAddresses && data[index] == MailBnfHelper.Comma) // local@dom,local@dom
@@ -276,7 +254,7 @@ namespace System.Net.Mail
                 // The preceding comment was not part of the display name.  Read just the quoted string.
                 index = QuotedStringFormatReader.ReadReverseQuoted(data, firstNonCommentIndex, true);
 
-                Debug.Assert(data[index + 1] == MailBnfHelper.Quote, "Mis-alligned index: " + index);
+                Debug.Assert(data[index + 1] == MailBnfHelper.Quote, "Mis-aligned index: " + index);
 
                 // Do not include the bounding quotes on the display name
                 int leftIndex = index + 2;
@@ -301,13 +279,11 @@ namespace System.Net.Mail
                 // Read until the dividing comma or the end of the line.
                 index = QuotedStringFormatReader.ReadReverseUnQuoted(data, index, true, expectMultipleAddresses);
 
-                Debug.Assert(index < 0 || data[index] == MailBnfHelper.Comma, "Mis-alligned index: " + index);
+                Debug.Assert(index < 0 || data[index] == MailBnfHelper.Comma, "Mis-aligned index: " + index);
 
-                // Do not include the Comma (if any)
-                displayName = data.Substring(index + 1, startingIndex - index);
-
-                // Because there were no bounding quotes, trim extra whitespace 
-                displayName = displayName.Trim();
+                // Do not include the Comma (if any), and because there were no bounding quotes, 
+                // trim extra whitespace.
+                displayName = data.SubstringTrim(index + 1, startingIndex - index);
             }
             return NormalizeOrThrow(displayName);
         }

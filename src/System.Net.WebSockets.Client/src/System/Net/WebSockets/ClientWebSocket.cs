@@ -1,21 +1,14 @@
-// Copyright (c) Microsoft. All rights reserved.
-// Licensed under the MIT license. See LICENSE file in the project root for full license information.
+// Licensed to the .NET Foundation under one or more agreements.
+// The .NET Foundation licenses this file to you under the MIT license.
+// See the LICENSE file in the project root for more information.
 
-using System;
-using System.Collections.Generic;
-using System.ComponentModel;
-using System.Diagnostics.CodeAnalysis;
 using System.Diagnostics;
-using System.Net;
-using System.Security.Cryptography.X509Certificates;
 using System.Threading;
 using System.Threading.Tasks;
 
-using Microsoft.Win32.SafeHandles;
-
 namespace System.Net.WebSockets
 {
-    public sealed class ClientWebSocket : WebSocket
+    public sealed partial class ClientWebSocket : WebSocket
     {
         private enum InternalState
         {
@@ -25,11 +18,8 @@ namespace System.Net.WebSockets
             Disposed = 3
         }
 
-        private const string WebSocketAvailableApiCheck = "WinHttpWebSocketCompleteUpgrade";
-
         private readonly ClientWebSocketOptions _options;
-        private WinHttpWebSocket _innerWebSocket;
-        private readonly CancellationTokenSource _cts;
+        private WebSocketHandle _innerWebSocket; // may be mutable struct; do not make readonly
 
         // NOTE: this is really an InternalState value, but Interlocked doesn't support
         //       operations on values of enum types.
@@ -37,20 +27,19 @@ namespace System.Net.WebSockets
 
         public ClientWebSocket()
         {
-            if (Logging.On)
+            if (NetEventSource.Log.IsEnabled())
             {
-                Logging.Enter(Logging.WebSockets, this, ".ctor", null);
+                NetEventSource.Enter(NetEventSource.ComponentType.WebSocket, this, ".ctor", null);
             }
 
-            CheckPlatformSupport();
+            WebSocketHandle.CheckPlatformSupport();
 
             _state = (int)InternalState.Created;
             _options = new ClientWebSocketOptions();
-            _cts = new CancellationTokenSource();
 
-            if (Logging.On)
+            if (NetEventSource.Log.IsEnabled())
             {
-                Logging.Exit(Logging.WebSockets, this, ".ctor", null);
+                NetEventSource.Exit(NetEventSource.ComponentType.WebSocket, this, ".ctor", null);
             }
         }
 
@@ -68,7 +57,7 @@ namespace System.Net.WebSockets
         {
             get
             {
-                if (_innerWebSocket != null)
+                if (WebSocketHandle.IsValid(_innerWebSocket))
                 {
                     return _innerWebSocket.CloseStatus;
                 }
@@ -80,7 +69,7 @@ namespace System.Net.WebSockets
         {
             get
             {
-                if (_innerWebSocket != null)
+                if (WebSocketHandle.IsValid(_innerWebSocket))
                 {
                     return _innerWebSocket.CloseStatusDescription;
                 }
@@ -92,7 +81,7 @@ namespace System.Net.WebSockets
         {
             get
             {
-                if (_innerWebSocket != null)
+                if (WebSocketHandle.IsValid(_innerWebSocket))
                 {
                     return _innerWebSocket.SubProtocol;
                 }
@@ -105,7 +94,7 @@ namespace System.Net.WebSockets
             get
             {
                 // state == Connected or Disposed
-                if (_innerWebSocket != null)
+                if (WebSocketHandle.IsValid(_innerWebSocket))
                 {
                     return _innerWebSocket.State;
                 }
@@ -128,15 +117,15 @@ namespace System.Net.WebSockets
         {
             if (uri == null)
             {
-                throw new ArgumentNullException("uri");
+                throw new ArgumentNullException(nameof(uri));
             }
             if (!uri.IsAbsoluteUri)
             {
-                throw new ArgumentException(SR.net_uri_NotAbsolute, "uri");
+                throw new ArgumentException(SR.net_uri_NotAbsolute, nameof(uri));
             }
             if (uri.Scheme != UriScheme.Ws && uri.Scheme != UriScheme.Wss)
             {
-                throw new ArgumentException(SR.net_WebSockets_Scheme, "uri");
+                throw new ArgumentException(SR.net_WebSockets_Scheme, nameof(uri));
             }
 
             // Check that we have not started already
@@ -154,9 +143,9 @@ namespace System.Net.WebSockets
             return ConnectAsyncCore(uri, cancellationToken);
         }
 
-        private Task ConnectAsyncCore(Uri uri, CancellationToken cancellationToken)
+        private async Task ConnectAsyncCore(Uri uri, CancellationToken cancellationToken)
         {
-            _innerWebSocket = new WinHttpWebSocket();
+            _innerWebSocket = WebSocketHandle.Create();
 
             try
             {
@@ -167,22 +156,13 @@ namespace System.Net.WebSockets
                     throw new ObjectDisposedException(GetType().FullName);
                 }
 
-                return _innerWebSocket.ConnectAsync(uri, cancellationToken, _options);
-            }
-            catch (Win32Exception ex)
-            {
-                WebSocketException wex = new WebSocketException(SR.net_webstatus_ConnectFailure, ex);
-                if (Logging.On)
-                {
-                    Logging.Exception(Logging.WebSockets, this, "ConnectAsync", wex);
-                }
-                throw wex;
+                await _innerWebSocket.ConnectAsyncCore(uri, cancellationToken, _options).ConfigureAwait(false);
             }
             catch (Exception ex)
             {
-                if (Logging.On)
+                if (NetEventSource.Log.IsEnabled())
                 {
-                    Logging.Exception(Logging.WebSockets, this, "ConnectAsync", ex);
+                    NetEventSource.Exception(NetEventSource.ComponentType.WebSocket, this, nameof(ConnectAsync), ex);
                 }
                 throw;
             }
@@ -192,21 +172,6 @@ namespace System.Net.WebSockets
             CancellationToken cancellationToken)
         {
             ThrowIfNotConnected();
-
-            if (!((messageType == WebSocketMessageType.Text) || (messageType == WebSocketMessageType.Binary)))
-            {
-                string errorMessage = SR.Format(
-                        SR.net_WebSockets_Argument_InvalidMessageType,
-                        "Close",
-                        "SendAsync",
-                        "Binary",
-                        "Text",
-                        "CloseOutputAsync");
-
-                throw new ArgumentException(errorMessage, "messageType");
-            }
-
-            WebSocketValidate.ValidateArraySegment<byte>(buffer, "buffer");
             return _innerWebSocket.SendAsync(buffer, messageType, endOfMessage, cancellationToken);
         }
 
@@ -214,7 +179,6 @@ namespace System.Net.WebSockets
             CancellationToken cancellationToken)
         {
             ThrowIfNotConnected();
-            WebSocketValidate.ValidateArraySegment<byte>(buffer, "buffer");
             return _innerWebSocket.ReceiveAsync(buffer, cancellationToken);
         }
 
@@ -222,7 +186,6 @@ namespace System.Net.WebSockets
             CancellationToken cancellationToken)
         {
             ThrowIfNotConnected();
-            WebSocketValidate.ValidateCloseStatus(closeStatus, statusDescription);
             return _innerWebSocket.CloseAsync(closeStatus, statusDescription, cancellationToken);
         }
 
@@ -230,7 +193,6 @@ namespace System.Net.WebSockets
             CancellationToken cancellationToken)
         {
             ThrowIfNotConnected();
-            WebSocketValidate.ValidateCloseStatus(closeStatus, statusDescription);
             return _innerWebSocket.CloseOutputAsync(closeStatus, statusDescription, cancellationToken);
         }
 
@@ -240,7 +202,7 @@ namespace System.Net.WebSockets
             {
                 return;
             }
-            if (_innerWebSocket != null)
+            if (WebSocketHandle.IsValid(_innerWebSocket))
             {
                 _innerWebSocket.Abort();
             }
@@ -255,9 +217,7 @@ namespace System.Net.WebSockets
                 // No cleanup required.
                 return;
             }
-            _cts.Cancel(false);
-            _cts.Dispose();
-            if (_innerWebSocket != null)
+            if (WebSocketHandle.IsValid(_innerWebSocket))
             {
                 _innerWebSocket.Dispose();
             }
@@ -272,21 +232,6 @@ namespace System.Net.WebSockets
             else if ((InternalState)_state != InternalState.Connected)
             {
                 throw new InvalidOperationException(SR.net_WebSockets_NotConnected);
-            }
-        }
-
-        private void CheckPlatformSupport()
-        {
-            bool isPlatformSupported = false;
-
-            using (SafeLibraryHandle libHandle = Interop.mincore.LoadLibraryExW(Interop.Libraries.WinHttp, IntPtr.Zero, 0))
-            {
-                isPlatformSupported = Interop.mincore.GetProcAddress(libHandle, WebSocketAvailableApiCheck) != IntPtr.Zero;
-            }
-
-            if (!isPlatformSupported)
-            {
-                WebSocketValidate.ThrowPlatformNotSupportedException();
             }
         }
     }

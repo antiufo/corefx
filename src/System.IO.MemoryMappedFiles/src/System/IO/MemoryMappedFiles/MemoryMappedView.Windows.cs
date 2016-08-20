@@ -1,5 +1,6 @@
-// Copyright (c) Microsoft. All rights reserved.
-// Licensed under the MIT license. See LICENSE file in the project root for full license information.
+// Licensed to the .NET Foundation under one or more agreements.
+// The .NET Foundation licenses this file to you under the MIT license.
+// See the LICENSE file in the project root for more information.
 
 using Microsoft.Win32.SafeHandles;
 using System.Diagnostics;
@@ -26,31 +27,22 @@ namespace System.IO.MemoryMappedFiles
             // extra memory we allocate before the start of the requested view. MapViewOfFile will also round the 
             // capacity of the view to the nearest multiple of the system page size.  Once again, we hide this 
             // from the user by preventing them from writing to any memory that they did not request.
-            ulong nativeSize, extraMemNeeded, newOffset;
+            ulong nativeSize;
+            long extraMemNeeded, newOffset;
             ValidateSizeAndOffset(
                 size, offset, GetSystemPageAllocationGranularity(), 
                 out nativeSize, out extraMemNeeded, out newOffset);
 
             // if request is >= than total virtual, then MapViewOfFile will fail with meaningless error message 
             // "the parameter is incorrect"; this provides better error message in advance
-            Interop.mincore.MEMORYSTATUSEX memStatus;
-            memStatus.dwLength = (uint)sizeof(Interop.mincore.MEMORYSTATUSEX);
-            Interop.mincore.GlobalMemoryStatusEx(out memStatus);
-            ulong totalVirtual = memStatus.ullTotalVirtual;
-            if (nativeSize >= totalVirtual)
-            {
-                throw new IOException(SR.IO_NotEnoughMemory);
-            }
-
-            // split the long into two ints
-            int offsetLow = unchecked((int)(newOffset & 0x00000000FFFFFFFFL));
-            int offsetHigh = unchecked((int)(newOffset >> 32));
+            Interop.CheckForAvailableVirtualMemory(nativeSize);
 
             // create the view
-            SafeMemoryMappedViewHandle viewHandle = Interop.mincore.MapViewOfFile(memMappedFileHandle,
-                    (int)MemoryMappedFile.GetFileMapAccess(access), offsetHigh, offsetLow, new UIntPtr(nativeSize));
+            SafeMemoryMappedViewHandle viewHandle = Interop.MapViewOfFile(memMappedFileHandle,
+                    (int)MemoryMappedFile.GetFileMapAccess(access), newOffset, new UIntPtr(nativeSize));
             if (viewHandle.IsInvalid)
             {
+                viewHandle.Dispose();
                 throw Win32Marshal.GetExceptionForLastWin32Error();
             }
 
@@ -69,14 +61,15 @@ namespace System.IO.MemoryMappedFiles
             // This is because, VirtualQuery function(that internally invokes VirtualQueryEx function) returns the attributes 
             // and size of the region of pages with matching attributes starting from base address.
             // VirtualQueryEx: http://msdn.microsoft.com/en-us/library/windows/desktop/aa366907(v=vs.85).aspx
-            if (((viewInfo.State & Interop.mincore.MemOptions.MEM_RESERVE) != 0) || (viewSize < nativeSize))
+            if (((viewInfo.State & Interop.mincore.MemOptions.MEM_RESERVE) != 0) || ((ulong)viewSize < (ulong)nativeSize))
             {
-                IntPtr tempHandle = Interop.mincore.VirtualAlloc(
+                IntPtr tempHandle = Interop.VirtualAlloc(
                     viewHandle, (UIntPtr)(nativeSize != MemoryMappedFile.DefaultSize ? nativeSize : viewSize), 
                     Interop.mincore.MemOptions.MEM_COMMIT, MemoryMappedFile.GetPageAccess(access));
                 int lastError = Marshal.GetLastWin32Error();
                 if (viewHandle.IsInvalid)
                 {
+                    viewHandle.Dispose();
                     throw Win32Marshal.GetExceptionForWin32Error(lastError);
                 }
                 // again query the view for its new size
@@ -88,15 +81,15 @@ namespace System.IO.MemoryMappedFiles
             // if the user specified DefaultSize as the size, we need to get the actual size
             if (size == MemoryMappedFile.DefaultSize)
             {
-                size = (long)(viewSize - extraMemNeeded);
+                size = (long)(viewSize - (ulong)extraMemNeeded);
             }
             else
             {
                 Debug.Assert(viewSize >= (ulong)size, "viewSize < size");
             }
 
-            viewHandle.Initialize((ulong)size + extraMemNeeded);
-            return new MemoryMappedView(viewHandle, (long)extraMemNeeded, size, access);
+            viewHandle.Initialize((ulong)size + (ulong)extraMemNeeded);
+            return new MemoryMappedView(viewHandle, extraMemNeeded, size, access);
         }
 
         // Flushes the changes such that they are in sync with the FileStream bits (ones obtained

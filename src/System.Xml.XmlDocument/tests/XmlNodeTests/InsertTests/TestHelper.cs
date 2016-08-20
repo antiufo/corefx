@@ -1,10 +1,10 @@
-// Copyright (c) Microsoft. All rights reserved.
-// Licensed under the MIT license. See LICENSE file in the project root for full license information.
+// Licensed to the .NET Foundation under one or more agreements.
+// The .NET Foundation licenses this file to you under the MIT license.
+// See the LICENSE file in the project root for more information.
 
 using Xunit;
-using System.Xml;
 
-namespace XmlDocumentTests.XmlNodeTests.InsertTests
+namespace System.Xml.Tests
 {
     public enum InsertType { Prepend, Append, InsertBefore, InsertAfter }
 
@@ -35,8 +35,7 @@ namespace XmlDocumentTests.XmlNodeTests.InsertTests
                 case XmlNodeType.SignificantWhitespace:
                     return doc.CreateSignificantWhitespace("	");
                 default:
-                    Assert.True(false, "Wrong XmlNodeType: '" + nodeType + "'");
-                    return null;
+                    throw new ArgumentException("Wrong XmlNodeType: '" + nodeType + "'");
             }
         }
 
@@ -77,8 +76,7 @@ namespace XmlDocumentTests.XmlNodeTests.InsertTests
                 case InsertType.Append:
                     return new InsertFrontOrEnd(AppendChild);
                 default:
-                    Assert.True(false, "Not supported InsertType='" + insertType + "'");
-                    return null;
+                    throw new ArgumentException("Not supported InsertType='" + insertType + "'");
             }
         }
 
@@ -93,8 +91,7 @@ namespace XmlDocumentTests.XmlNodeTests.InsertTests
                 case InsertType.InsertAfter:
                     return new InsertBeforeOrAfter(InsertAfter);
                 default:
-                    Assert.True(false, "Not supported InsertType '" + insertType + "'");
-                    return null;
+                    throw new ArgumentException("Not supported InsertType '" + insertType + "'");
             }
         }
 
@@ -138,8 +135,7 @@ namespace XmlDocumentTests.XmlNodeTests.InsertTests
                     Assert.Null(newChild.NextSibling);
                     break;
                 default:
-                    Assert.True(false, "Wrong insert type: '" + insertType + "'");
-                    break;
+                    throw new ArgumentException("Wrong insert type: '" + insertType + "'");
             }
         }
 
@@ -164,8 +160,7 @@ namespace XmlDocumentTests.XmlNodeTests.InsertTests
                     next = newChild;
                     break;
                 default:
-                    Assert.True(false, "Wrong InsertType: '" + insertType + "'");
-                    break;
+                    throw new ArgumentException("Wrong InsertType: '" + insertType + "'");
             }
 
             Assert.NotNull(prev);

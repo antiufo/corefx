@@ -1,40 +1,120 @@
-// Copyright (c) Microsoft. All rights reserved.
-// Licensed under the MIT license. See LICENSE file in the project root for full license information.
+// Licensed to the .NET Foundation under one or more agreements.
+// The .NET Foundation licenses this file to you under the MIT license.
+// See the LICENSE file in the project root for more information.
 
 using System.Security;
 using System.Text;
 
 namespace System
 {
-    // TODO: We need an actual implementation here, but since all ASCII strings are normalized under all normalization forms
-    // we can handle the simple cases, which will actually allow a lot of code to just work.
-
     static partial class StringNormalizationExtensions
     {
         [SecurityCritical]
-        public static bool IsNormalized(this string value, NormalizationForm normalizationForm)
+        public static bool IsNormalized(this string strInput, NormalizationForm normalizationForm)
         {
-            for (int i = 0; i < value.Length; i++)
+            ValidateArguments(strInput, normalizationForm);
+
+            int ret = Interop.GlobalizationNative.IsNormalized(normalizationForm, strInput, strInput.Length);
+
+            if (ret == -1)
             {
-                if (value[i] > 0x7F)
-                {
-                    throw NotImplemented.ByDesign;
-                }
+                throw new ArgumentException(SR.Argument_InvalidCharSequenceNoIndex, nameof(strInput));
             }
 
-            return true;
+            return ret == 1;
         }
 
         [SecurityCritical]
-        public static string Normalize(this string value, NormalizationForm normalizationForm)
+        public static string Normalize(this string strInput, NormalizationForm normalizationForm)
         {
-            if (IsNormalized(value, normalizationForm))
+            ValidateArguments(strInput, normalizationForm);
+
+            char[] buf = new char[strInput.Length];
+
+            for (int attempts = 2; attempts > 0; attempts--)
             {
-                return value;
+                int realLen = Interop.GlobalizationNative.NormalizeString(normalizationForm, strInput, strInput.Length, buf, buf.Length);
+
+                if (realLen == -1)
+                {
+                    throw new ArgumentException(SR.Argument_InvalidCharSequenceNoIndex, nameof(strInput));
+                }
+
+                if (realLen <= buf.Length)
+                {
+                    return new string(buf, 0, realLen);
+                }
+
+                buf = new char[realLen];
             }
 
-            throw NotImplemented.ByDesign;
+            throw new ArgumentException(SR.Argument_InvalidCharSequenceNoIndex, nameof(strInput));
+        }
+
+        // -----------------------------
+        // ---- PAL layer ends here ----
+        // -----------------------------
+
+        private static void ValidateArguments(string strInput, NormalizationForm normalizationForm)
+        {
+            if (strInput == null)
+            {
+                throw new ArgumentNullException(nameof(strInput));
+            }
+
+            if (normalizationForm != NormalizationForm.FormC && normalizationForm != NormalizationForm.FormD &&
+                normalizationForm != NormalizationForm.FormKC && normalizationForm != NormalizationForm.FormKD)
+            {
+                throw new ArgumentException(SR.Argument_InvalidNormalizationForm, nameof(normalizationForm));
+            }
+
+            if (HasInvalidUnicodeSequence(strInput))
+            {
+                throw new ArgumentException(SR.Argument_InvalidCharSequenceNoIndex, nameof(strInput));
+            }
+        }
+
+        /// <summary>
+        /// ICU does not signal an error during normalization if the input string has invalid unicode,
+        /// unlike Windows (which uses the ERROR_NO_UNICODE_TRANSLATION error value to signal an error).
+        ///
+        /// We walk the string ourselves looking for these bad sequences so we can continue to throw
+        /// ArgumentException in these cases.
+        /// </summary>
+        private static bool HasInvalidUnicodeSequence(string s)
+        {
+            for (int i = 0; i < s.Length; i++)
+            {
+                char c = s[i];
+
+                if (c == '\uFFFE')
+                {
+                    return true;
+                }
+
+                // If we see low surrogate before a high one, the string is invalid.
+                if (char.IsLowSurrogate(c))
+                {
+                    return true;
+                }
+
+                if (char.IsHighSurrogate(c))
+                {
+                    if (i + 1 >= s.Length || !char.IsLowSurrogate(s[i + 1]))
+                    {
+                        // A high surrogate at the end of the string or a high surrogate
+                        // not followed by a low surrogate
+                        return true;
+                    }
+                    else
+                    {
+                        i++; // consume the low surrogate.
+                        continue;
+                    }
+                }
+            }
+
+            return false;
         }
     }
 }
-

@@ -1,9 +1,11 @@
-﻿// Copyright (c) Microsoft. All rights reserved.
-// Licensed under the MIT license. See LICENSE file in the project root for full license information.
+// Licensed to the .NET Foundation under one or more agreements.
+// The .NET Foundation licenses this file to you under the MIT license.
+// See the LICENSE file in the project root for more information.
 
 using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.ComponentModel;
 using System.Globalization;
 using System.Runtime.CompilerServices;
 using System.Runtime.Serialization;
@@ -11,7 +13,8 @@ using System.Xml;
 using System.Xml.Linq;
 using System.Xml.Schema;
 using System.Xml.Serialization;
-using System.ComponentModel;
+using System.IO;
+using System.Text;
 
 namespace SerializationTypes
 {
@@ -288,6 +291,11 @@ namespace SerializationTypes
                 return _ro2;
             }
         }
+    }
+
+    public class TypeWithSimpleDictionaryMember
+    {
+        public Dictionary<string, int> F1;
     }
 
     public class TypeWithIDictionaryPropertyInitWithConcreteType
@@ -1277,6 +1285,18 @@ namespace SerializationTypes
         }
     }
 
+    public class TypeWithDateTimePropertyAsXmlTime
+    {
+        DateTime _value;
+
+        [XmlText(DataType = "time")]
+        public DateTime Value
+        {
+            get { return _value; }
+            set { _value = value; }
+        }
+    }
+
     [DataContract(IsReference = false)]
     public class SimpleDC
     {
@@ -1498,6 +1518,12 @@ namespace SerializationTypes
         public int B;
     }
 
+    public struct SimpleStructWithProperties
+    {
+        public int Num { get; set; }
+        public string Text { get; set; }
+    }
+
     public class WithEnums
     {
         public IntEnum Int { get; set; }
@@ -1675,6 +1701,47 @@ namespace SerializationTypes
         }
     }
 
+    public class TypeWithNestedGenericClassImplementingIXmlSerialiable
+    {
+        // T can only be string
+        public class NestedGenericClassImplementingIXmlSerialiable<T> : IXmlSerializable
+        {
+            public static bool WriteXmlInvoked = false;
+            public static bool ReadXmlInvoked = false;
+
+        public string StringValue { get; set; }
+        private T GenericValue { get; set; }
+
+        public NestedGenericClassImplementingIXmlSerialiable()
+        {
+            GenericValue = default(T);
+        }
+
+        public T GetPrivateMember()
+        {
+            return GenericValue;
+        }
+
+        public System.Xml.Schema.XmlSchema GetSchema()
+        {
+            return null;
+        }
+
+        public void ReadXml(System.Xml.XmlReader reader)
+        {
+            ReadXmlInvoked = true;
+            reader.MoveToContent();
+            StringValue = reader.GetAttribute("StringValue");
+        }
+
+        public void WriteXml(System.Xml.XmlWriter writer)
+        {
+            WriteXmlInvoked = true;
+            writer.WriteAttributeString("StringValue", StringValue);
+        }
+        }
+    }
+
     public class TypeWithPropertyNameSpecified
     {
         public string MyField;
@@ -1791,6 +1858,16 @@ namespace SerializationTypes
     public class BaseClassForInvalidDerivedClass
     {
         public int Id;
+    }
+
+    public class InvalidDerivedClass : BaseClassForInvalidDerivedClass
+    {
+        public ICollection<int> Member1;
+    }
+
+    public class AnotherInvalidDerivedClass : BaseClassForInvalidDerivedClass
+    {
+        public ICollection<int> Member1;
     }
 
     public class TypeWithTypeProperty
@@ -2029,14 +2106,34 @@ namespace SerializationTypes
     {
         private List<string> _anotherStringList = new List<string>();
 
+        static TypeWithListPropertiesWithoutPublicSetters()
+        {
+            StaticProperty = "Static property should not be checked for public setter";
+        }
+
         public TypeWithListPropertiesWithoutPublicSetters()
         {
+            PropertyWithXmlElementAttribute = new List<string>();
             IntList = new MyGenericList<int>();
             StringList = new List<string>();
+            PrivateIntListField = new List<int>();
+            PublicIntListField = new List<int>();
+            PublicIntListFieldWithXmlElementAttribute = new List<int>();
         }
+
+        public static string StaticProperty { get; private set; }
+
+
+        [XmlElement("PropWithXmlElementAttr")]
+        public List<string> PropertyWithXmlElementAttribute { get; private set; }
         public MyGenericList<int> IntList { get; private set; }
         public List<string> StringList { get; private set; }
         public List<string> AnotherStringList { get { return _anotherStringList; } }
+
+        private List<int> PrivateIntListField;
+        public List<int> PublicIntListField;
+        [XmlElement("FieldWithXmlElementAttr")]
+        public List<int> PublicIntListFieldWithXmlElementAttribute;
     }
 
     public abstract class HighScoreManager<T> where T : HighScoreManager<T>.HighScoreBase
@@ -2053,6 +2150,463 @@ namespace SerializationTypes
             public int Id { get; set; }
             public string Name { get; set; }
         }
+    }
+
+    public class TypeWithNestedPublicType
+    {
+        public TypeWithNestedPublicType()
+        {
+            Level = 10;
+        }
+
+        public uint Level { get; private set; }
+        public class LevelData
+        {
+            public string Name { get; set; }
+        }
+    }
+
+    public class PublicTypeWithNestedPublicTypeWithNestedPublicType
+    {
+        public PublicTypeWithNestedPublicTypeWithNestedPublicType()
+        {
+            Level = 10;
+        }
+
+        public uint Level { get; private set; }
+
+        public class NestedPublicType
+        {
+            public class LevelData
+            {
+                public string Name { get; set; }
+            }
+        }
+    }
+
+    internal class InternalTypeWithNestedPublicType
+    {
+        public InternalTypeWithNestedPublicType()
+        {
+            Level = 10;
+        }
+
+        public uint Level { get; private set; }
+        public class LevelData
+        {
+            public string Name { get; set; }
+        }
+    }
+
+    internal class InternalTypeWithNestedPublicTypeWithNestedPublicType
+    {
+        public InternalTypeWithNestedPublicTypeWithNestedPublicType()
+        {
+            Level = 10;
+        }
+
+        public uint Level { get; private set; }
+
+        public class NestedPublicType
+        {
+            public class LevelData
+            {
+                public string Name { get; set; }
+            }
+        }
+    }
+
+    [DataContract]
+    public class BaseTypeWithDataMember
+    {
+        [DataMember]
+        public TypeAsEmbeddedDataMember EmbeddedDataMember { get; set; }
+    }
+
+    [DataContract]
+    public class DerivedTypeWithDataMemberInBaseType : BaseTypeWithDataMember
+    {
+    }
+
+    [DataContract]
+    public class TypeAsEmbeddedDataMember
+    {
+        [DataMember]
+        public string Name { get; set; }
+    }
+
+    public class PocoBaseTypeWithDataMember
+    {
+        public PocoTypeAsEmbeddedDataMember EmbeddedDataMember { get; set; }
+    }
+
+    public class PocoDerivedTypeWithDataMemberInBaseType : PocoBaseTypeWithDataMember
+    {
+    }
+
+    public class PocoTypeAsEmbeddedDataMember
+    {
+        public string Name { get; set; }
+    }
+
+    public class SpotlightDescription
+    {
+        public SpotlightDescription() { }
+        public bool IsDynamic { get; set; }
+        public string Value { get; set; }
+    }
+
+    public enum SlideEventType
+    {
+        None,
+        LaunchURL,
+        LaunchSection,
+        LaunchVideo,
+        LaunchImage
+    }
+
+    public class SerializableSlide
+    {
+        public SerializableSlide() { }
+        public SpotlightDescription Description { get; set; }
+        public string DisplayCondition { get; set; }
+        public string EventData { get; set; }
+        public SlideEventType EventType { get; set; }
+        public string ImageName { get; set; }
+        public string ImagePath { get; set; }
+        public string Title { get; set; }
+    }
+
+    public class GenericTypeWithNestedGenerics<T>
+    {
+        public class InnerGeneric<U>
+        {
+            public T data1;
+            public U data2;
+        }
+    }
+
+    [DataContract]
+    public class TypeWithXmlQualifiedName
+    {
+        [DataMember(IsRequired = true, EmitDefaultValue = false)]
+        public XmlQualifiedName Value { get; set; }
+    }
+
+    public class TypeWithNoDefaultCtor
+    {
+        public TypeWithNoDefaultCtor(string id)
+        {
+            ID = id;
+        }
+        public string ID { get; set; }
+    }
+
+    public class TypeWithPropertyWithoutDefaultCtor
+    {
+        public TypeWithPropertyWithoutDefaultCtor()
+        {
+        }
+
+        public string Name { get; set; }
+        public TypeWithNoDefaultCtor MemberWithInvalidDataContract { get; set; }
+    }
+
+
+    [DataContract(Name = "DCWith.InName")]
+    public class DataContractWithDotInName
+    {
+        [DataMember]
+        public string Name { get; set; }
+    }
+
+    [DataContract(Name = "DCWith-InName")]
+    public class DataContractWithMinusSignInName
+    {
+        [DataMember]
+        public string Name { get; set; }
+    }
+
+    [DataContract(Name = "DCWith{}[]().,:;+-*/%&|^!~=<>?++--&&||<<>>==!=<=>=+=-=*=/=%=&=|=^=<<=>>=->InName")]
+    public class DataContractWithOperatorsInName
+    {
+        [DataMember]
+        public string Name { get; set; }
+    }
+
+    [DataContract(Name = "DCWith`@#$'\" 	InName")]
+    public class DataContractWithOtherSymbolsInName
+    {
+        [DataMember]
+        public string Name { get; set; }
+    }
+
+    [CollectionDataContract(Name = "MyHeaders", Namespace = "http://schemas.microsoft.com/netservices/2010/10/servicebus/connect", ItemName = "MyHeader", KeyName = "MyKey", ValueName = "MyValue")]
+    public sealed class CollectionDataContractWithCustomKeyName : Dictionary<int, int>
+    {
+        public CollectionDataContractWithCustomKeyName()
+        {
+        }
+    }
+
+    // Dictionary<int, int> is already used above so there will be a conflict.
+    [CollectionDataContract(Name = "MyHeaders2", Namespace = "http://schemas.microsoft.com/netservices/2010/10/servicebus/connect", ItemName = "MyHeader2", KeyName = "MyKey2", ValueName = "MyValue2")]
+    public sealed class CollectionDataContractWithCustomKeyNameDuplicate : Dictionary<int, int>
+    {
+        public CollectionDataContractWithCustomKeyNameDuplicate()
+        {
+        }
+    }
+
+    public class CollectionWithoutDefaultConstructor : MyCollection<string>
+    {
+        internal CollectionWithoutDefaultConstructor(string name) : base()
+        {
+            Name = name;
+        }
+
+        public string Name { get; set; }
+    }
+
+    public class TypeWithCollectionWithoutDefaultConstructor
+    {
+        public TypeWithCollectionWithoutDefaultConstructor()
+        {
+            _collectionWithoutDefaultConstructor = new CollectionWithoutDefaultConstructor("MyName");
+        }
+
+        CollectionWithoutDefaultConstructor _collectionWithoutDefaultConstructor;
+        public CollectionWithoutDefaultConstructor CollectionProperty { get { return _collectionWithoutDefaultConstructor; } }
+    }
+
+    public class TypeMissingSerializationCodeBase
+    {
+    }
+
+    public class TypeMissingSerializationCodeDerived : TypeMissingSerializationCodeBase
+    {
+        public string Name { get; set; }
+    }
+
+    public class SimpleTypeWihtMoreProperties
+    {
+        public string StringProperty { get; set; }
+        public int IntProperty { get; set; }
+        public MyEnum EnumProperty { get; set; }
+        public List<string> CollectionProperty { get; set; }
+        public List<SimpleTypeWihtMoreProperties> SimpleTypeList { get; set; }
+    }
+
+    public class TypeWith2DArrayProperty1
+    {
+        [System.Xml.Serialization.XmlArrayItemAttribute("SimpleType", typeof(SimpleType), NestingLevel = 1, IsNullable = false)]
+        public SimpleType[][] TwoDArrayOfSimpleType;
+    }
+
+    public class SimpleTypeWithMoreFields
+    {
+        public string StringField;
+        public int IntField;
+        public MyEnum EnumField;
+        public List<string> CollectionField;
+        public List<SimpleTypeWithMoreFields> SimpleTypeList;
+    }
+
+    // New types
+    public class TypeWithPrimitiveProperties
+    {
+        public string P1 { get; set; }
+        public int P2 { get; set; }
+        public override bool Equals(object obj)
+        {
+            TypeWithPrimitiveProperties other = obj as TypeWithPrimitiveProperties;
+            if (other == this)
+            {
+                return true;
+            }
+            if (other == null)
+            {
+                return false;
+            }
+            return this.P1 == other.P1 && this.P2 == other.P2;
+        }
+        public override int GetHashCode()
+        {
+            return P1.GetHashCode() ^ P2.GetHashCode();
+        }
+    }
+
+    public class TypeWithPrimitiveFields
+    {
+        public string P1;
+        public int P2;
+    }
+
+    public class TypeWithAllPrimitiveProperties
+    {
+        public bool BooleanMember { get; set; }
+        //public byte[] ByteArrayMember { get; set; }
+        public char CharMember { get; set; }
+        public DateTime DateTimeMember { get; set; }
+        public decimal DecimalMember { get; set; }
+        public double DoubleMember { get; set; }
+        public float FloatMember { get; set; }
+        public Guid GuidMember { get; set; }
+        //public byte[] HexBinaryMember { get; set; }
+        public string StringMember { get; set; }
+        public int IntMember { get; set; }
+    }
+
+    public class TypeImplementsGenericICollection<T> : ICollection<T>
+    {
+        private List<T> _items = new List<T>();
+
+        public TypeImplementsGenericICollection()
+        {
+        }
+
+        public TypeImplementsGenericICollection(params T[] values)
+        {
+            _items.AddRange(values);
+        }
+
+        public void Add(T item)
+        {
+            _items.Add(item);
+        }
+
+        public void Clear()
+        {
+            _items.Clear();
+        }
+
+        public bool Contains(T item)
+        {
+            return _items.Contains(item);
+        }
+
+        public void CopyTo(T[] array, int arrayIndex)
+        {
+            _items.CopyTo(array, arrayIndex);
+        }
+
+        public int Count
+        {
+            get { return _items.Count; }
+        }
+
+        public bool IsReadOnly
+        {
+            get { return ((ICollection<T>)_items).IsReadOnly; }
+        }
+
+        public bool Remove(T item)
+        {
+            return _items.Remove(item);
+        }
+
+        public IEnumerator<T> GetEnumerator()
+        {
+            return ((ICollection<T>)_items).GetEnumerator();
+        }
+
+        IEnumerator IEnumerable.GetEnumerator()
+        {
+            return ((IEnumerable)_items).GetEnumerator();
+        }
+    }
+
+    public class MyNonGenericDictionary : IDictionary
+    {
+        private Dictionary<object, object> _d = new Dictionary<object, object>();
+
+        public void Add(object key, object value)
+        {
+            _d.Add(key, value);
+        }
+
+        public void Clear()
+        {
+            _d.Clear();
+        }
+
+        public bool Contains(object key)
+        {
+            return _d.ContainsKey(key);
+        }
+
+        public IDictionaryEnumerator GetEnumerator()
+        {
+            return ((IDictionary)_d).GetEnumerator();
+        }
+
+        public bool IsFixedSize
+        {
+            get { return ((IDictionary)_d).IsFixedSize; }
+        }
+
+        public bool IsReadOnly
+        {
+            get { return ((IDictionary)_d).IsReadOnly; }
+        }
+
+        public ICollection Keys
+        {
+            get { return _d.Keys; }
+        }
+
+        public void Remove(object key)
+        {
+            _d.Remove(key);
+        }
+
+        public ICollection Values
+        {
+            get { return _d.Values; }
+        }
+
+        public object this[object key]
+        {
+            get
+            {
+                return _d[key];
+            }
+            set
+            {
+                _d[key] = value;
+            }
+        }
+
+        public void CopyTo(Array array, int index)
+        {
+            ((IDictionary)_d).CopyTo(array, index);
+        }
+
+        public int Count
+        {
+            get { return _d.Count; }
+        }
+
+        public bool IsSynchronized
+        {
+            get { return ((IDictionary)_d).IsSynchronized; }
+        }
+
+        public object SyncRoot
+        {
+            get { return ((IDictionary)_d).SyncRoot; }
+        }
+
+        IEnumerator IEnumerable.GetEnumerator()
+        {
+            return ((IEnumerable)_d).GetEnumerator();
+        }
+    }
+
+    public class TypeWith2DArrayProperty2
+    {
+        [System.Xml.Serialization.XmlArrayItemAttribute("SimpleType", typeof(SimpleType[]), IsNullable = false)]
+        public SimpleType[][] TwoDArrayOfSimpleType;
     }
 }
 
@@ -2090,6 +2644,55 @@ namespace DuplicateTypeNamesTest.ns2
     {
         uno, dos, tres,
     }
+}
+
+public class TypeWithPrivateFieldAndPrivateGetPublicSetProperty
+{
+    private string _name;
+
+    public string Name
+    {
+        private get
+        {
+            return _name;
+        }
+        set
+        {
+            _name = value;
+        }
+    }
+
+    public string GetName()
+    {
+        return _name;
+    }
+}
+
+public class TypeWithoutPublicSetter
+{
+    public string Name { get; private set; }
+
+    [XmlIgnore]
+    public int Age { get; private set; }
+
+    public Type MyType { get; private set; }
+
+    public string ValidProperty { get; set; }
+
+    public string PropertyWrapper
+    {
+        get
+        {
+            return ValidProperty;
+        }
+    }
+}
+
+[CompilerGenerated]
+public class TypeWithCompilerGeneratedAttributeButWithoutPublicSetter
+{
+    [CompilerGenerated]
+    public string Name { get; private set; }
 }
 
 public class TestableDerivedException : System.Exception
@@ -2141,6 +2744,283 @@ public class AppEnvironment
     public int ScreenDpi { get; set; }
 }
 
+#region Types for data contract surrogate tests
+
+public class NonSerializablePerson
+{
+    public string Name { get; private set; }
+    public int Age { get; private set; }
+
+    public NonSerializablePerson(string name, int age)
+    {
+        this.Name = name;
+        this.Age = age;
+    }
+
+    public override string ToString()
+    {
+        return string.Format("Person[Name={0},Age={1}]", this.Name, this.Age);
+    }
+}
+
+public class NonSerializablePersonForStress
+{
+    public string Name { get; private set; }
+    public int Age { get; private set; }
+
+    public NonSerializablePersonForStress(string name, int age)
+    {
+        this.Name = name;
+        this.Age = age;
+    }
+
+    public override string ToString()
+    {
+        return string.Format("Person[Name={0},Age={1}]", this.Name, this.Age);
+    }
+}
+
+public class Family
+{
+    public NonSerializablePerson[] Members;
+
+    public override string ToString()
+    {
+        StringBuilder sb = new StringBuilder();
+        sb.AppendLine("Family members:");
+        foreach (var member in this.Members)
+        {
+            sb.AppendLine("  " + member);
+        }
+
+        return sb.ToString();
+    }
+}
+
+public class FamilyForStress
+{
+    public NonSerializablePersonForStress[] Members;
+
+    public override string ToString()
+    {
+        StringBuilder sb = new StringBuilder();
+        sb.AppendLine("Family members:");
+        foreach (var member in this.Members)
+        {
+            sb.AppendLine("  " + member);
+        }
+
+        return sb.ToString();
+    }
+}
+
+[DataContract]
+public class NonSerializablePersonSurrogate
+{
+    [DataMember(Name = "PersonName")]
+    public string Name { get; set; }
+    [DataMember(Name = "PersonAge")]
+    public int Age { get; set; }
+}
+
+// Note that DataContractAttribute.IsReference is set to true.
+[DataContract(IsReference = true)]
+public class NonSerializablePersonForStressSurrogate
+{
+    [DataMember(Name = "PersonName")]
+    public string Name { get; set; }
+    [DataMember(Name = "PersonAge")]
+    public int Age { get; set; }
+}
+
+public class MyPersonSurrogateProvider : ISerializationSurrogateProvider
+{
+    public Type GetSurrogateType(Type type)
+    {
+        if (type == typeof(NonSerializablePerson))
+        {
+            return typeof(NonSerializablePersonSurrogate);
+        }
+        else if (type == typeof(NonSerializablePersonForStress))
+        {
+            return typeof(NonSerializablePersonForStressSurrogate);
+        }
+        else
+        {
+            return type;
+        }
+    }
+
+    public object GetDeserializedObject(object obj, Type targetType)
+    {
+        if (obj is NonSerializablePersonSurrogate)
+        {
+            NonSerializablePersonSurrogate person = (NonSerializablePersonSurrogate)obj;
+            return new NonSerializablePerson(person.Name, person.Age);
+        }
+        else if (obj is NonSerializablePersonForStressSurrogate)
+        {
+            NonSerializablePersonForStressSurrogate person = (NonSerializablePersonForStressSurrogate)obj;
+            return new NonSerializablePersonForStress(person.Name, person.Age);
+        }
+
+        return obj;
+    }
+
+    public object GetObjectToSerialize(object obj, Type targetType)
+    {
+        if (obj is NonSerializablePerson)
+        {
+            NonSerializablePerson nsp = (NonSerializablePerson)obj;
+            NonSerializablePersonSurrogate serializablePerson = new NonSerializablePersonSurrogate
+            {
+                Name = nsp.Name,
+                Age = nsp.Age,
+            };
+
+            return serializablePerson;
+        }
+        else if (obj is NonSerializablePersonForStress)
+        {
+            NonSerializablePersonForStress nsp = (NonSerializablePersonForStress)obj;
+            NonSerializablePersonForStressSurrogate serializablePerson = new NonSerializablePersonForStressSurrogate
+            {
+                Name = nsp.Name,
+                Age = nsp.Age,
+            };
+
+            return serializablePerson;
+        }
+
+        return obj;
+    }
+}
+
+[DataContract]
+class MyFileStream : IDisposable
+{
+    private FileStream stream;
+
+    internal string Name
+    {
+        get
+        {
+            return this.stream.Name;
+        }
+    }
+
+    internal MyFileStream(string fileName)
+    {
+        this.stream = new FileStream(
+                            fileName,
+                            FileMode.OpenOrCreate,
+                            FileAccess.ReadWrite,
+                            FileShare.ReadWrite);
+    }
+
+    internal void WriteLine(string line)
+    {
+        using (StreamWriter writer = new StreamWriter(this.stream))
+        {
+            writer.WriteLine(line);
+        }
+    }
+
+    internal string ReadLine()
+    {
+        using (StreamReader reader = new StreamReader(this.stream))
+        {
+            return reader.ReadLine();
+        }
+    }
+
+    public void Dispose()
+    {
+        this.stream.Dispose();
+    }
+}
+
+[DataContract]
+class MyFileStreamReference
+{
+    [DataMember]
+    private string fileStreamName;
+
+    private MyFileStreamReference(string fileStreamName)
+    {
+        this.fileStreamName = fileStreamName;
+    }
+
+    internal static MyFileStreamReference Create(MyFileStream myFileStream)
+    {
+        return new MyFileStreamReference(myFileStream.Name);
+    }
+
+    internal MyFileStream ToMyFileStream()
+    {
+        return new MyFileStream(fileStreamName);
+    }
+}
+
+internal class MyFileStreamSurrogateProvider : ISerializationSurrogateProvider
+{
+    static MyFileStreamSurrogateProvider()
+    {
+        Singleton = new MyFileStreamSurrogateProvider();
+    }
+
+    internal static MyFileStreamSurrogateProvider Singleton { get; private set; }
+
+    public Type GetSurrogateType(Type type)
+    {
+        if (type == typeof (MyFileStream))
+        {
+            return typeof (MyFileStreamReference);
+        }
+
+        return type;
+    }
+
+    public object GetObjectToSerialize(object obj, Type targetType)
+    {
+        if (obj == null)
+        {
+            return null;
+        }
+        MyFileStream myFileStream = obj as MyFileStream;
+        if (null != myFileStream)
+        {
+            if (targetType != typeof (MyFileStreamReference))
+            {
+                throw new ArgumentException("Target type for serialization must be MyFileStream");
+            }
+            return MyFileStreamReference.Create(myFileStream);
+        }
+
+        return obj;
+    }
+
+    public object GetDeserializedObject(object obj, Type targetType)
+    {
+        if (obj == null)
+        {
+            return null;
+        }
+        MyFileStreamReference myFileStreamRef = obj as MyFileStreamReference;
+        if (null != myFileStreamRef)
+        {
+            if (targetType != typeof (MyFileStream))
+            {
+                throw new ArgumentException("Target type for deserialization must be MyFileStream");
+            }
+            return myFileStreamRef.ToMyFileStream();
+        }
+        return obj;
+    }
+}
+
+#endregion
+
 public class TypeWithBinaryProperty
 {
     [XmlElement(DataType = "hexBinary")]
@@ -2148,3 +3028,177 @@ public class TypeWithBinaryProperty
     [XmlElement(DataType = "base64Binary")]
     public byte[] Base64Content { get; set; }
 }
+
+public class TypeWithTimeSpanProperty
+{
+    public TimeSpan TimeSpanProperty;
+}
+
+public class TypeWithByteProperty
+{
+    public byte ByteProperty;
+}
+
+[DataContract(Name = "TypeWithIntAndStringProperty", Namespace = "")]
+public class TypeWithIntAndStringProperty
+{
+    [DataMember]
+    public int SampleInt { get; set; }
+
+    [DataMember]
+    public string SampleString { get; set; }
+}
+
+[DataContract(Name = "TypeWithTypeWithIntAndStringPropertyProperty", Namespace = "")]
+public class TypeWithTypeWithIntAndStringPropertyProperty
+{
+    [DataMember]
+    public TypeWithIntAndStringProperty ObjectProperty { get; set; }
+}
+
+[DataContract]
+public class TypeWithCollectionInterfaceGetOnlyCollection
+{
+    List<string> items;
+
+    [DataMember]
+    public ICollection<string> Items
+    {
+        get
+        {
+            if (items == null)
+            {
+                items = new List<string>();
+            }
+            return this.items;
+        }
+    }
+
+    public TypeWithCollectionInterfaceGetOnlyCollection() { }
+
+    public TypeWithCollectionInterfaceGetOnlyCollection(List<string> items)
+    {
+        this.items = items;
+    }
+}
+
+[DataContract]
+public class TypeWithEnumerableInterfaceGetOnlyCollection
+{
+    List<string> items;
+
+    [DataMember]
+    public IEnumerable<string> Items
+    {
+        get
+        {
+            if (items == null)
+            {
+                items = new List<string>();
+            }
+            return this.items;
+        }
+    }
+
+    public TypeWithEnumerableInterfaceGetOnlyCollection() { }
+
+    public TypeWithEnumerableInterfaceGetOnlyCollection(List<string> items)
+    {
+        this.items = items;
+    }
+}
+
+[CollectionDataContract]
+public class RecursiveCollection : List<RecursiveCollection2>
+{
+
+}
+
+[CollectionDataContract]
+public class RecursiveCollection2 : List<RecursiveCollection3>
+{
+
+}
+
+[CollectionDataContract]
+public class RecursiveCollection3 : List<RecursiveCollection>
+{
+
+}
+
+[XmlRoot()]
+public class TypeWithXmlNodeArrayProperty
+{
+    [XmlText]
+    public XmlNode[] CDATA { get; set; }
+}
+
+[DataContract]
+public class TypeWithListOfReferenceChildren
+{
+    [DataMember]
+    public List<TypeOfReferenceChild> Children { get; set; }
+}
+
+[DataContract(IsReference = true)]
+public class TypeOfReferenceChild
+{
+    [DataMember]
+    public TypeWithListOfReferenceChildren Root { get; set; }
+    [DataMember]
+    public string Name { get; set; }
+}
+
+[DataContract]
+public sealed class TypeWithInternalDefaultConstructor
+{
+    internal TypeWithInternalDefaultConstructor()
+    {
+    }
+
+    internal static TypeWithInternalDefaultConstructor CreateInstance()
+    {
+        return new TypeWithInternalDefaultConstructor();
+    }
+
+    [DataMember]
+    public string Name { get; set; }
+}
+
+public sealed class TypeWithInternalDefaultConstructorWithoutDataContractAttribute
+{
+    internal TypeWithInternalDefaultConstructorWithoutDataContractAttribute()
+    {
+    }
+
+    internal static TypeWithInternalDefaultConstructorWithoutDataContractAttribute CreateInstance()
+    {
+        return new TypeWithInternalDefaultConstructorWithoutDataContractAttribute();
+    }
+
+    [DataMember]
+    public string Name { get; set; }
+}
+
+[DataContract]
+public class TypeWithEmitDefaultValueFalse
+{
+    [DataMember(EmitDefaultValue = false)]
+    public string Name = null;
+    [DataMember(EmitDefaultValue = false)]
+    public int ID = 0;
+}
+
+[DataContract(Namespace = "ItemTypeNamespace")]
+public class TypeWithNonDefaultNamcespace
+{
+    [DataMember]
+    public string Name;
+}
+
+[CollectionDataContract(Namespace = "CollectionNamespace")]
+public class CollectionOfTypeWithNonDefaultNamcespace : List<TypeWithNonDefaultNamcespace>
+{
+
+}
+

@@ -1,10 +1,11 @@
-// Copyright (c) Microsoft. All rights reserved.
-// Licensed under the MIT license. See LICENSE file in the project root for full license information.
+// Licensed to the .NET Foundation under one or more agreements.
+// The .NET Foundation licenses this file to you under the MIT license.
+// See the LICENSE file in the project root for more information.
 
 using System.Linq;
 using Xunit;
 
-namespace System.IO.FileSystem.Tests
+namespace System.IO.Tests
 {
     public class Directory_CreateDirectory : FileSystemTest
     {
@@ -37,7 +38,12 @@ namespace System.IO.FileSystem.Tests
             var paths = IOInputs.GetPathsWithInvalidCharacters();
             Assert.All(paths, (path) =>
             {
-                Assert.Throws<ArgumentException>(() => Create(path));
+                if (path.Equals(@"\\?\"))
+                    Assert.Throws<IOException>(() => Create(path));
+                else if (path.Contains(@"\\?\"))
+                    Assert.Throws<DirectoryNotFoundException>(() => Create(path));
+                else
+                    Assert.Throws<ArgumentException>(() => Create(path));
             });
         }
 
@@ -59,8 +65,17 @@ namespace System.IO.FileSystem.Tests
         public void PathAlreadyExistsAsDirectory(FileAttributes attributes)
         {
             DirectoryInfo testDir = Create(GetTestFilePath());
-            testDir.Attributes = attributes;
-            Assert.Equal(testDir.FullName, Create(testDir.FullName).FullName);
+            FileAttributes original = testDir.Attributes;
+
+            try
+            {
+                testDir.Attributes = attributes;
+                Assert.Equal(testDir.FullName, Create(testDir.FullName).FullName);
+            }
+            finally
+            {
+                testDir.Attributes = original;
+            }
         }
 
         [Fact]
@@ -210,9 +225,32 @@ namespace System.IO.FileSystem.Tests
 
         [Fact]
         [PlatformSpecific(PlatformID.Windows)]
-        public void DirectoryLongerThanMaxPathAsPath_ThrowsPathTooLongException()
+        public void PathWithInvalidColons_ThrowsNotSupportedException()
         {
-            var paths = IOInputs.GetPathsLongerThanMaxPath();
+            var paths = IOInputs.GetPathsWithInvalidColons();
+            Assert.All(paths, (path) =>
+            {
+                Assert.Throws<NotSupportedException>(() => Create(path));
+            });
+        }
+
+        [Fact]
+        [PlatformSpecific(PlatformID.Windows)]
+        public void DirectoryLongerThanMaxPath_Succeeds()
+        {
+            var paths = IOInputs.GetPathsLongerThanMaxPath(GetTestFilePath());
+            Assert.All(paths, (path) =>
+            {
+                DirectoryInfo result = Create(path);
+                Assert.True(Directory.Exists(result.FullName));
+            });
+        }
+
+        [Fact]
+        [PlatformSpecific(PlatformID.Windows)]
+        public void DirectoryLongerThanMaxLongPath_ThrowsPathTooLongException()
+        {
+            var paths = IOInputs.GetPathsLongerThanMaxLongPath(GetTestFilePath());
             Assert.All(paths, (path) =>
             {
                 Assert.Throws<PathTooLongException>(() => Create(path));
@@ -221,9 +259,21 @@ namespace System.IO.FileSystem.Tests
 
         [Fact]
         [PlatformSpecific(PlatformID.Windows)]
-        public void ExtendedDirectoryLongerThanLegacyMaxPathSucceeds()
+        public void DirectoryLongerThanMaxLongPathWithExtendedSyntax_ThrowsPathTooLongException()
         {
-            var paths = IOInputs.GetPathsLongerThanMaxPath(useExtendedSyntax: true, includeExtendedMaxPath: false);
+            var paths = IOInputs.GetPathsLongerThanMaxLongPath(GetTestFilePath(), useExtendedSyntax: true);
+            Assert.All(paths, (path) =>
+            {
+                Assert.Throws<PathTooLongException>(() => Create(path));
+            });
+        }
+
+
+        [Fact]
+        [PlatformSpecific(PlatformID.Windows)]
+        public void ExtendedDirectoryLongerThanLegacyMaxPath_Succeeds()
+        {
+            var paths = IOInputs.GetPathsLongerThanMaxPath(GetTestFilePath(), useExtendedSyntax: true);
             Assert.All(paths, (path) =>
             {
                 Assert.True(Create(path).Exists);
@@ -232,12 +282,13 @@ namespace System.IO.FileSystem.Tests
 
         [Fact]
         [PlatformSpecific(PlatformID.Windows)]
-        public void DirectoryLongerThanMaxDirectoryAsPath_ThrowsPathTooLongException()
+        public void DirectoryLongerThanMaxDirectoryAsPath_Succeeds()
         {
-            var paths = IOInputs.GetPathsLongerThanMaxDirectory();
+            var paths = IOInputs.GetPathsLongerThanMaxDirectory(GetTestFilePath());
             Assert.All(paths, (path) =>
             {
-                Assert.Throws<PathTooLongException>(() => Create(path));
+                var result = Create(path);
+                Assert.True(Directory.Exists(result.FullName));
             });
         }
 
@@ -291,7 +342,7 @@ namespace System.IO.FileSystem.Tests
         [PlatformSpecific(PlatformID.Windows)]
         public void WindowsTrailingWhiteSpace()
         {
-            // Windows will remove all nonsignificant whitespace in a path
+            // Windows will remove all non-significant whitespace in a path
             DirectoryInfo testDir = Create(GetTestFilePath());
             var components = IOInputs.GetWhiteSpace();
 
@@ -415,7 +466,6 @@ namespace System.IO.FileSystem.Tests
 
         [Fact]
         [PlatformSpecific(PlatformID.AnyUnix)]
-        [ActiveIssue(2459)]
         public void DriveLetter_Unix()
         {
             // On Unix, there's no special casing for drive letters, which are valid file names
@@ -423,7 +473,14 @@ namespace System.IO.FileSystem.Tests
             var current = Create(".");
             Assert.Equal("C:", driveLetter.Name);
             Assert.Equal(Path.Combine(current.FullName, "C:"), driveLetter.FullName);
-            Directory.Delete("C:");
+            try
+            {
+                // If this test is inherited then it's possible this call will fail due to the "C:" directory
+                // being deleted in that other test before this call. What we care about testing (proper path 
+                // handling) is unaffected by this race condition.
+                Directory.Delete("C:");
+            }
+            catch (DirectoryNotFoundException) { }
         }
 
         [Fact]

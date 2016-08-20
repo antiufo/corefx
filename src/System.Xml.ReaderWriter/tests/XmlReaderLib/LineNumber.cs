@@ -1,15 +1,12 @@
-﻿// Copyright (c) Microsoft. All rights reserved.
-// Licensed under the MIT license. See LICENSE file in the project root for full license information.
+// Licensed to the .NET Foundation under one or more agreements.
+// The .NET Foundation licenses this file to you under the MIT license.
+// See the LICENSE file in the project root for more information.
 
-using System;
-using System.Collections.Generic;
-using System.IO;
-using System.Xml;
-using System.Text;
 using OLEDB.Test.ModuleCore;
+using System.IO;
 using XmlCoreTest.Common;
 
-namespace XmlReaderTest.Common
+namespace System.Xml.Tests
 {
     [InheritRequired()]
     public abstract partial class TCLinePos : TCXMLReaderBaseGeneral
@@ -56,7 +53,7 @@ namespace XmlReaderTest.Common
         [Variation("LineNumber/LinePos after Read and NodeType = Element", Priority = 0)]
         public int TestLinePos1()
         {
-            ReloadSource(TestData + "Common/LineNumber.xml");
+            ReloadSource(Path.Combine(TestData, "Common", "LineNumber.xml"));
             DataReader.PositionOnElement(ST_ELEMENT);
             CheckPos(0, 0);
             return TEST_PASS;
@@ -65,7 +62,7 @@ namespace XmlReaderTest.Common
         [Variation("LineNumber/LinePos after Read and NodeType = CDATA", Priority = 0)]
         public int TestLinePos2()
         {
-            ReloadSource(TestData + "Common/LineNumber.xml");
+            ReloadSource(Path.Combine(TestData, "Common", "LineNumber.xml"));
             PositionOnNodeType2(XmlNodeType.CDATA);
             CheckPos(0, 0);
             return TEST_PASS;
@@ -74,7 +71,7 @@ namespace XmlReaderTest.Common
         [Variation("LineNumber/LinePos after Read and NodeType = Comment", Priority = 0)]
         public int TestLinePos4()
         {
-            ReloadSource(TestData + "Common/LineNumber.xml");
+            ReloadSource(Path.Combine(TestData, "Common", "LineNumber.xml"));
             PositionOnNodeType2(XmlNodeType.Comment);
             CheckPos(0, 0);
             return TEST_PASS;
@@ -83,7 +80,7 @@ namespace XmlReaderTest.Common
         [Variation("LineNumber/LinePos after Read and NodeType = EndElement", Priority = 0)]
         public int TestLinePos6()
         {
-            ReloadSource(TestData + "Common/LineNumber.xml");
+            ReloadSource(Path.Combine(TestData, "Common", "LineNumber.xml"));
             PositionOnNodeType2(XmlNodeType.EndElement);
             CheckPos(0, 0);
             return TEST_PASS;
@@ -93,7 +90,7 @@ namespace XmlReaderTest.Common
         public int TestLinePos7()
         {
             CError.Skip("Skipped");
-            ReloadSource(TestData + "Common/LineNumber.xml");
+            ReloadSource(Path.Combine(TestData, "Common", "LineNumber.xml"));
             PositionOnNodeType2(XmlNodeType.EntityReference);
 
             CheckPos(11, 14);
@@ -116,7 +113,7 @@ namespace XmlReaderTest.Common
         [Variation("LineNumber/LinePos after Read and NodeType = ProcessingInstruction", Priority = 0)]
         public int TestLinePos9()
         {
-            ReloadSource(TestData + "Common/LineNumber.xml");
+            ReloadSource(Path.Combine(TestData, "Common", "LineNumber.xml"));
 
             PositionOnNodeType2(XmlNodeType.ProcessingInstruction);
             CheckPos(0, 0);
@@ -129,7 +126,7 @@ namespace XmlReaderTest.Common
         [Variation("LineNumber/LinePos after Read and NodeType = SignificantWhitespace", Priority = 0)]
         public int TestLinePos10()
         {
-            ReloadSource(TestData + "Common/LineNumber.xml");
+            ReloadSource(Path.Combine(TestData, "Common", "LineNumber.xml"));
             PositionOnNodeType2(XmlNodeType.SignificantWhitespace);
             CheckPos(0, 0);
             return TEST_PASS;
@@ -138,7 +135,7 @@ namespace XmlReaderTest.Common
         [Variation("LineNumber/LinePos after Read and NodeType = Text", Priority = 0)]
         public int TestLinePos11()
         {
-            ReloadSource(TestData + "Common/LineNumber.xml");
+            ReloadSource(Path.Combine(TestData, "Common", "LineNumber.xml"));
             PositionOnNodeType2(XmlNodeType.Text);
             CheckPos(0, 0);
             return TEST_PASS;
@@ -147,7 +144,7 @@ namespace XmlReaderTest.Common
         [Variation("LineNumber/LinePos after Read and NodeType = Whitespace", Priority = 0)]
         public int TestLinePos12()
         {
-            ReloadSource(TestData + "Common/LineNumber.xml");
+            ReloadSource(Path.Combine(TestData, "Common", "LineNumber.xml"));
             PositionOnNodeType2(XmlNodeType.Whitespace);
             CheckPos(0, 0);
             PositionOnNodeType2(XmlNodeType.Whitespace);
@@ -161,7 +158,7 @@ namespace XmlReaderTest.Common
         public int TestLinePos13()
         {
             if (IsSubtreeReader()) CError.Skip("Skipped");
-            ReloadSource(TestData + "Common/LineNumber.xml");
+            ReloadSource(Path.Combine(TestData, "Common", "LineNumber.xml"));
             PositionOnNodeType2(XmlNodeType.XmlDeclaration);
             CheckPos(0, 0);
             return TEST_PASS;
@@ -170,7 +167,7 @@ namespace XmlReaderTest.Common
         [Variation("LineNumber/LinePos after MoveToElement")]
         public int TestLinePos14()
         {
-            ReloadSource(TestData + "Common/LineNumber.xml");
+            ReloadSource(Path.Combine(TestData, "Common", "LineNumber.xml"));
 
             DataReader.PositionOnElement(ST_ELEMENT);
             CheckPos(0, 0);
@@ -183,7 +180,7 @@ namespace XmlReaderTest.Common
         [Variation("LineNumber/LinePos after MoveToFirstAttribute/MoveToNextAttribute")]
         public int TestLinePos15()
         {
-            ReloadSource(TestData + "Common/LineNumber.xml");
+            ReloadSource(Path.Combine(TestData, "Common", "LineNumber.xml"));
             DataReader.PositionOnElement(ST_ELEMENT);
             CheckPos(0, 0);
             DataReader.MoveToFirstAttribute();
@@ -198,7 +195,7 @@ namespace XmlReaderTest.Common
         [Variation("LineNumber/LinePos after MoveToAttribute")]
         public int TestLinePos16()
         {
-            ReloadSource(TestData + "Common/LineNumber.xml");
+            ReloadSource(Path.Combine(TestData, "Common", "LineNumber.xml"));
             DataReader.PositionOnElement(ST_ELEMENT);
             CheckPos(0, 0);
             DataReader.MoveToAttribute(1);
@@ -219,7 +216,7 @@ namespace XmlReaderTest.Common
         [Variation("LineNumber/LinePos after Skip")]
         public int TestLinePos18()
         {
-            ReloadSource(TestData + "Common/LineNumber.xml");
+            ReloadSource(Path.Combine(TestData, "Common", "LineNumber.xml"));
             DataReader.PositionOnElement(ST_ELEMENT);
             DataReader.MoveToFirstAttribute();
             DataReader.Skip();
@@ -233,7 +230,7 @@ namespace XmlReaderTest.Common
         [Variation("LineNumber/LinePos after ReadInnerXml")]
         public int TestLinePos19()
         {
-            ReloadSource(TestData + "Common/LineNumber.xml");
+            ReloadSource(Path.Combine(TestData, "Common", "LineNumber.xml"));
             DataReader.PositionOnElement(ST_ELEMENT);
             DataReader.MoveToFirstAttribute();
             DataReader.ReadInnerXml();
@@ -249,7 +246,7 @@ namespace XmlReaderTest.Common
         {
             if (IsSubtreeReader()) CError.Skip("Skipped");
 
-            ReloadSource(TestData + "Common/LineNumber.xml");
+            ReloadSource(Path.Combine(TestData, "Common", "LineNumber.xml"));
 
             PositionOnNodeType2(XmlNodeType.XmlDeclaration);
             DataReader.MoveToContent();
@@ -270,7 +267,7 @@ namespace XmlReaderTest.Common
         {
             if (IsCustomReader()) CError.Skip("Skipped");
 
-            ReloadSource(TestData + "Common/LineNumber.xml");
+            ReloadSource(Path.Combine(TestData, "Common", "LineNumber.xml"));
             DataReader.PositionOnElement(ST_BASE64);
 
             byte[] arr = new byte[3];
@@ -290,7 +287,7 @@ namespace XmlReaderTest.Common
         {
             if (IsCustomReader()) CError.Skip("Skipped");
 
-            ReloadSource(TestData + "Common/LineNumber.xml");
+            ReloadSource(Path.Combine(TestData, "Common", "LineNumber.xml"));
             DataReader.PositionOnElement(ST_BINHEX);
 
             byte[] arr = new byte[1];
@@ -309,7 +306,7 @@ namespace XmlReaderTest.Common
         [Variation("LineNumber/LinePos after ReadEndElement")]
         public int TestLinePos26()
         {
-            ReloadSource(TestData + "Common/LineNumber.xml");
+            ReloadSource(Path.Combine(TestData, "Common", "LineNumber.xml"));
             DataReader.PositionOnElement(ST_CHARENTITY);
 
             DataReader.Read(); // Text
@@ -325,7 +322,7 @@ namespace XmlReaderTest.Common
         [Variation("LineNumber/LinePos after ReadString")]
         public int TestLinePos27()
         {
-            ReloadSource(TestData + "Common/LineNumber.xml");
+            ReloadSource(Path.Combine(TestData, "Common", "LineNumber.xml"));
             DataReader.PositionOnElement(ST_ENTITYREF);
 
             DataReader.Read();
@@ -348,7 +345,7 @@ namespace XmlReaderTest.Common
         [Variation("LineNumber/LinePos after element containing entities in attribute values")]
         public int TestLinePos39()
         {
-            ReloadSource(TestData + "Common/LineNumber.xml");
+            ReloadSource(Path.Combine(TestData, "Common", "LineNumber.xml"));
             DataReader.PositionOnElement("EMBEDDED");
             CheckPos(0, 0);
             return TEST_PASS;
@@ -357,7 +354,7 @@ namespace XmlReaderTest.Common
         [Variation("LineNumber/LinePos when Read = false")]
         public int TestLinePos40()
         {
-            ReloadSource(TestData + @"Common/LineNumber.xml");
+            ReloadSource(Path.Combine(TestData, "Common", "LineNumber.xml"));
             while (DataReader.Read()) ;
             CheckPos(0, 0);
             return TEST_PASS;
@@ -480,7 +477,7 @@ namespace XmlReaderTest.Common
         [Variation("Check error message on a non-wellformed XML")]
         public int ReadingNonWellFormedXmlThrows()
         {
-            string filename = TestData + "Common/Bug86503.txt";
+            string filename = Path.Combine(TestData, "Common", "Bug86503.txt");
             try
             {
                 ReloadSource(filename);
@@ -493,7 +490,7 @@ namespace XmlReaderTest.Common
         [Variation("When an XmlException is thrown both XmlException.LineNumber and XmlTextReader.LineNumber should be same")]
         public int XmlExceptionAndXmlTextReaderLineNumberShouldBeSameAfterExceptionIsThrown()
         {
-            string filename = TestData + "Common/invalid-ucs4.xml";
+            string filename = Path.Combine(TestData, "Common", "invalid-ucs4.xml");
             if (!IsCustomReader())
             {
                 try
@@ -538,9 +535,9 @@ namespace XmlReaderTest.Common
         public int LineNumberAndLinePositionAreCorrect()
         {
             XmlReaderSettings rs = new XmlReaderSettings();
-            Stream fs = FilePathUtil.getStream(TestData + "Common\\Bug297091.xsl");
+            Stream fs = FilePathUtil.getStream(Path.Combine(TestData, "Common", "Bug297091.xsl"));
             {
-                XmlReader DataReader = ReaderHelper.Create(fs, rs, TestData + "Common\\Bug297091.xsl");
+                XmlReader DataReader = ReaderHelper.Create(fs, rs, Path.Combine(TestData, "Common", "Bug297091.xsl"));
 
                 DataReader.Read();
                 if (DataReader.NodeType != XmlNodeType.Element || ((IXmlLineInfo)DataReader).LineNumber != 1 || ((IXmlLineInfo)DataReader).LinePosition != 2)

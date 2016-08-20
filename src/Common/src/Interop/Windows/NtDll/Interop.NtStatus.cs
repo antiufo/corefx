@@ -1,5 +1,6 @@
-// Copyright (c) Microsoft. All rights reserved.
-// Licensed under the MIT license. See LICENSE file in the project root for full license information.
+// Licensed to the .NET Foundation under one or more agreements.
+// The .NET Foundation licenses this file to you under the MIT license.
+// See the LICENSE file in the project root for more information.
 
 internal static partial class Interop
 {
@@ -14,5 +15,6 @@ internal static partial class Interop
         internal const uint STATUS_NONE_MAPPED = 0xC0000073;
         internal const uint STATUS_INSUFFICIENT_RESOURCES = 0xC000009A;
         internal const uint STATUS_ACCESS_DENIED = 0xC0000022;
+        internal const uint STATUS_ACCOUNT_RESTRICTION = 0xc000006e;
     }
 }

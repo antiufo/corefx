@@ -1,5 +1,6 @@
-// Copyright (c) Microsoft. All rights reserved.
-// Licensed under the MIT license. See LICENSE file in the project root for full license information.
+// Licensed to the .NET Foundation under one or more agreements.
+// The .NET Foundation licenses this file to you under the MIT license.
+// See the LICENSE file in the project root for more information.
 // ------------------------------------------------------------------------------
 // Changes to this file must follow the http://aka.ms/api-review process.
 // ------------------------------------------------------------------------------
@@ -15,6 +16,11 @@ namespace Microsoft.Win32.SafeHandles
 }
 namespace System.Security.Cryptography.X509Certificates
 {
+    public static partial class ECDsaCertificateExtensions
+    {
+        public static System.Security.Cryptography.ECDsa GetECDsaPrivateKey(this System.Security.Cryptography.X509Certificates.X509Certificate2 certificate) { return default(System.Security.Cryptography.ECDsa); }
+        public static System.Security.Cryptography.ECDsa GetECDsaPublicKey(this System.Security.Cryptography.X509Certificates.X509Certificate2 certificate) { return default(System.Security.Cryptography.ECDsa); }
+    }
     [System.FlagsAttribute]
     public enum OpenFlags
     {
@@ -231,9 +237,9 @@ namespace System.Security.Cryptography.X509Certificates
     {
         internal X509ChainElementCollection() { }
         public int Count { get { return default(int); } }
-        public bool IsSynchronized { get { return default(bool); } }
+        bool System.Collections.ICollection.IsSynchronized { get { return default(bool); } }
         public System.Security.Cryptography.X509Certificates.X509ChainElement this[int index] { get { return default(System.Security.Cryptography.X509Certificates.X509ChainElement); } }
-        public object SyncRoot { get { return default(object); } }
+        object System.Collections.ICollection.SyncRoot { get { return default(object); } }
         public void CopyTo(System.Security.Cryptography.X509Certificates.X509ChainElement[] array, int index) { }
         public System.Security.Cryptography.X509Certificates.X509ChainElementEnumerator GetEnumerator() { return default(System.Security.Cryptography.X509Certificates.X509ChainElementEnumerator); }
         void System.Collections.ICollection.CopyTo(System.Array array, int index) { }
@@ -273,10 +279,13 @@ namespace System.Security.Cryptography.X509Certificates
         CtlNotTimeValid = 131072,
         CtlNotValidForUsage = 524288,
         Cyclic = 128,
+        ExplicitDistrust = 67108864,
         HasExcludedNameConstraint = 32768,
         HasNotDefinedNameConstraint = 8192,
         HasNotPermittedNameConstraint = 16384,
+        HasNotSupportedCriticalExtension = 134217728,
         HasNotSupportedNameConstraint = 4096,
+        HasWeakSignature = 1048576,
         InvalidBasicConstraints = 1024,
         InvalidExtension = 256,
         InvalidNameConstraints = 2048,
@@ -325,10 +334,10 @@ namespace System.Security.Cryptography.X509Certificates
     {
         public X509ExtensionCollection() { }
         public int Count { get { return default(int); } }
-        public bool IsSynchronized { get { return default(bool); } }
+        bool System.Collections.ICollection.IsSynchronized { get { return default(bool); } }
         public System.Security.Cryptography.X509Certificates.X509Extension this[int index] { get { return default(System.Security.Cryptography.X509Certificates.X509Extension); } }
         public System.Security.Cryptography.X509Certificates.X509Extension this[string oid] { get { return default(System.Security.Cryptography.X509Certificates.X509Extension); } }
-        public object SyncRoot { get { return default(object); } }
+        object System.Collections.ICollection.SyncRoot { get { return default(object); } }
         public int Add(System.Security.Cryptography.X509Certificates.X509Extension extension) { return default(int); }
         public void CopyTo(System.Security.Cryptography.X509Certificates.X509Extension[] array, int index) { }
         public System.Security.Cryptography.X509Certificates.X509ExtensionEnumerator GetEnumerator() { return default(System.Security.Cryptography.X509Certificates.X509ExtensionEnumerator); }

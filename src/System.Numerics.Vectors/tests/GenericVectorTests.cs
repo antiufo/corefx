@@ -1,6 +1,6 @@
-// Copyright (c) Microsoft. All rights reserved.
-// Licensed under the MIT license. See LICENSE file in the project root for full license information.
-// This file is auto-generated, do not make permanent modifications.
+// Licensed to the .NET Foundation under one or more agreements.
+// The .NET Foundation licenses this file to you under the MIT license.
+// See the LICENSE file in the project root for more information.
 
 using System;
 using System.Globalization;
@@ -1220,24 +1220,28 @@ namespace System.Numerics.Tests
         public void GreaterThanOrEqualAnyDouble() { TestVectorGreaterThanOrEqualAny<Double>(); }
         private void TestVectorGreaterThanOrEqualAny<T>() where T : struct
         {
+            int maxT = GetMaxValue<T>();
+            double maxStep = (double)maxT / (double)Vector<T>.Count;
+            double halfStep = maxStep / 2;
+
             T[] values1 = new T[Vector<T>.Count];
             for (int g = 0; g < Vector<T>.Count; g++)
             {
-                values1[g] = (T)(dynamic)(g);
+                values1[g] = (T)(dynamic)(g * halfStep);
             }
             Vector<T> vec1 = new Vector<T>(values1);
 
             T[] values2 = new T[Vector<T>.Count];
             for (int g = 0; g < Vector<T>.Count; g++)
             {
-                values2[g] = (T)(dynamic)(g * 5);
+                values2[g] = (T)(dynamic)(g * maxStep);
             }
             Vector<T> vec2 = new Vector<T>(values2);
 
             T[] values3 = new T[Vector<T>.Count];
             for (int g = 0; g < Vector<T>.Count; g++)
             {
-                values3[g] = (T)(dynamic)(g * 5 + 3);
+                values3[g] = (T)(dynamic)((g + 1) * maxStep);
             }
             Vector<T> vec3 = new Vector<T>(values3);
 
@@ -1275,24 +1279,28 @@ namespace System.Numerics.Tests
         public void GreaterThanOrEqualAllDouble() { TestVectorGreaterThanOrEqualAll<Double>(); }
         private void TestVectorGreaterThanOrEqualAll<T>() where T : struct
         {
+            int maxT = GetMaxValue<T>();
+            double maxStep = (double)maxT / (double)Vector<T>.Count;
+            double halfStep = maxStep / 2;
+
             T[] values1 = new T[Vector<T>.Count];
             for (int g = 0; g < Vector<T>.Count; g++)
             {
-                values1[g] = (T)(dynamic)(g);
+                values1[g] = (T)(dynamic)(g * halfStep);
             }
             Vector<T> vec1 = new Vector<T>(values1);
 
             T[] values2 = new T[Vector<T>.Count];
             for (int g = 0; g < Vector<T>.Count; g++)
             {
-                values2[g] = (T)(dynamic)(g * 5);
+                values2[g] = (T)(dynamic)(g * maxStep);
             }
             Vector<T> vec2 = new Vector<T>(values2);
 
             T[] values3 = new T[Vector<T>.Count];
             for (int g = 0; g < Vector<T>.Count; g++)
             {
-                values3[g] = (T)(dynamic)(g * 5 + 3);
+                values3[g] = (T)(dynamic)((g + 1) * maxStep);
             }
             Vector<T> vec3 = new Vector<T>(values3);
 

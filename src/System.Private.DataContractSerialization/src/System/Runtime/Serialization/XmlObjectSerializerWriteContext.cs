@@ -1,5 +1,6 @@
-// Copyright (c) Microsoft. All rights reserved.
-// Licensed under the MIT license. See LICENSE file in the project root for full license information.
+// Licensed to the .NET Foundation under one or more agreements.
+// The .NET Foundation licenses this file to you under the MIT license.
+// See the LICENSE file in the project root for more information.
 
 using System;
 using System.Collections;
@@ -35,11 +36,10 @@ namespace System.Runtime.Serialization
 
         internal static XmlObjectSerializerWriteContext CreateContext(DataContractSerializer serializer, DataContract rootTypeDataContract, DataContractResolver dataContractResolver)
         {
-            return new XmlObjectSerializerWriteContext(serializer, rootTypeDataContract
-                                                                                       , dataContractResolver
-                                                                                                             );
+            return (serializer.PreserveObjectReferences || serializer.SerializationSurrogateProvider != null)
+                ? new XmlObjectSerializerWriteContextComplex(serializer, rootTypeDataContract, dataContractResolver)
+                : new XmlObjectSerializerWriteContext(serializer, rootTypeDataContract, dataContractResolver);
         }
-
 
         protected XmlObjectSerializerWriteContext(DataContractSerializer serializer, DataContract rootTypeDataContract, DataContractResolver resolver)
             : base(serializer, rootTypeDataContract, resolver)
@@ -48,7 +48,6 @@ namespace System.Runtime.Serialization
             // Known types restricts the set of types that can be deserialized
             _unsafeTypeForwardingEnabled = true;
         }
-
 
         internal XmlObjectSerializerWriteContext(XmlObjectSerializer serializer, int maxItemsInObjectGraph, StreamingContext streamingContext, bool ignoreExtensionDataObject)
             : base(serializer, maxItemsInObjectGraph, streamingContext, ignoreExtensionDataObject)
@@ -187,7 +186,7 @@ namespace System.Runtime.Serialization
                     return;
                 dataContract = GetDataContract(declaredTypeHandle, declaredType);
 #else
-            DataContract dataContract = DataContract.GetDataContractFromGeneratedAssembly(declaredType);
+            DataContract dataContract = DataContract.GetDataContract(declaredType);
             if (dataContract.TypeIsInterface && dataContract.TypeIsCollectionInterface)
             {
                 if (OnHandleIsReference(xmlWriter, dataContract, obj))
@@ -233,7 +232,7 @@ namespace System.Runtime.Serialization
 
         internal bool OnHandleIsReference(XmlWriterDelegator xmlWriter, DataContract contract, object obj)
         {
-            if (!contract.IsReference || _isGetOnlyCollection)
+            if (preserveObjectReferences || !contract.IsReference || _isGetOnlyCollection)
             {
                 return false;
             }
@@ -557,6 +556,21 @@ namespace System.Runtime.Serialization
             IXmlSerializable xmlSerializable = obj as IXmlSerializable;
             if (xmlSerializable != null)
                 xmlSerializable.WriteXml(xmlSerializableWriter);
+            else
+            {
+                XmlElement xmlElement = obj as XmlElement;
+                if (xmlElement != null)
+                    xmlElement.WriteTo(xmlSerializableWriter);
+                else
+                {
+                    XmlNode[] xmlNodes = obj as XmlNode[];
+                    if (xmlNodes != null)
+                        foreach (XmlNode xmlNode in xmlNodes)
+                            xmlNode.WriteTo(xmlSerializableWriter);
+                    else
+                        throw DiagnosticUtility.ExceptionUtility.ThrowHelperError(XmlObjectSerializer.CreateSerializationException(SR.Format(SR.UnknownXmlType, DataContract.GetClrTypeFullName(obj.GetType()))));
+                }
+            }
             xmlSerializableWriter.EndWrite();
         }
 
@@ -633,7 +647,7 @@ namespace System.Runtime.Serialization
             writer.WriteAttributeQualifiedName(Globals.XsiPrefix, DictionaryGlobals.XsiTypeLocalName, DictionaryGlobals.SchemaInstanceNamespace, dataContractName, dataContractNamespace);
         }
 
-#if !NET_NATIVE && MERGE_DCJS
+#if !NET_NATIVE
         public void WriteExtensionData(XmlWriterDelegator xmlWriter, ExtensionDataObject extensionData, int memberIndex)
         {
             // Needed by the code generator, but not called. 

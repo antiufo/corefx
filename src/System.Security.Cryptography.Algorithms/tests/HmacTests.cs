@@ -1,5 +1,6 @@
-﻿// Copyright (c) Microsoft. All rights reserved.
-// Licensed under the MIT license. See LICENSE file in the project root for full license information.
+// Licensed to the .NET Foundation under one or more agreements.
+// The .NET Foundation licenses this file to you under the MIT license.
+// See the LICENSE file in the project root for more information.
 
 using Test.Cryptography;
 using Xunit;
@@ -21,6 +22,10 @@ namespace System.Security.Cryptography.Hashing.Algorithms.Tests
         }
 
         protected abstract HMAC Create();
+
+        protected abstract HashAlgorithm CreateHashAlgorithm();
+
+        protected abstract int BlockSize { get; }
 
         protected void VerifyHmac(
             int testCaseId,
@@ -56,6 +61,37 @@ namespace System.Security.Cryptography.Hashing.Algorithms.Tests
             }
 
             Assert.Equal(digestBytes, computedDigest);
+        }
+
+        protected void VerifyHmacRfc2104_2()
+        {
+            // Ensure that keys shorter than the threshold don't get altered.
+            using (HMAC hmac = Create())
+            {
+                byte[] key = new byte[BlockSize];
+                hmac.Key = key;
+                byte[] retrievedKey = hmac.Key;
+                Assert.Equal<byte>(key, retrievedKey);
+            }
+
+            // Ensure that keys longer than the threshold are adjusted via Rfc2104 Section 2.
+            using (HMAC hmac = Create())
+            {
+                byte[] overSizedKey = new byte[BlockSize + 1];
+                hmac.Key = overSizedKey;
+                byte[] actualKey = hmac.Key;
+                byte[] expectedKey = CreateHashAlgorithm().ComputeHash(overSizedKey);
+                Assert.Equal<byte>(expectedKey, actualKey);
+
+                // Also ensure that the hashing operation uses the adjusted key.
+                byte[] data = new byte[100];
+                hmac.Key = expectedKey;
+                byte[] expectedHash = hmac.ComputeHash(data);
+
+                hmac.Key = overSizedKey;
+                byte[] actualHash = hmac.ComputeHash(data);
+                Assert.Equal<byte>(expectedHash, actualHash);
+            }
         }
     }
 }

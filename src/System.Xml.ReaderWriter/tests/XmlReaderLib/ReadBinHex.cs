@@ -1,14 +1,13 @@
-// Copyright (c) Microsoft. All rights reserved.
-// Licensed under the MIT license. See LICENSE file in the project root for full license information.
+// Licensed to the .NET Foundation under one or more agreements.
+// The .NET Foundation licenses this file to you under the MIT license.
+// See the LICENSE file in the project root for more information.
 
-using System;
-using System.IO;
-using System.Xml;
-using System.Text;
 using OLEDB.Test.ModuleCore;
+using System.IO;
+using System.Text;
 using XmlCoreTest.Common;
 
-namespace XmlReaderTest.Common
+namespace System.Xml.Tests
 {
     [InheritRequired()]
     public abstract partial class TCReadContentAsBinHex : TCXMLReaderBaseGeneral
@@ -443,7 +442,7 @@ namespace XmlReaderTest.Common
         [Variation("WS:WireCompat:hex binary fails to send/return data after 1787 bytes")]
         public int TestTextReadBinHex_24()
         {
-            string filename = TestData + "Common/Bug99148.xml";
+            string filename = Path.Combine(TestData, "Common", "Bug99148.xml");
             ReloadSource(filename);
 
             DataReader.MoveToContent();
@@ -867,7 +866,7 @@ namespace XmlReaderTest.Common
         [Variation("WS:WireCompat:hex binary fails to send/return data after 1787 bytes")]
         public int TestTextReadBinHex_24()
         {
-            string filename = TestData + "Common/Bug99148.xml";
+            string filename = Path.Combine(TestData, "Common", "Bug99148.xml");
             ReloadSource(filename);
 
             DataReader.MoveToContent();

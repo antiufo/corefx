@@ -1,8 +1,6 @@
-﻿// Copyright (c) Microsoft. All rights reserved.
-// Licensed under the MIT license. See LICENSE file in the project root for full license information.
-//------------------------------------------------------------------------------
-// </copyright>
-//------------------------------------------------------------------------------
+// Licensed to the .NET Foundation under one or more agreements.
+// The .NET Foundation licenses this file to you under the MIT license.
+// See the LICENSE file in the project root for more information.
 
 namespace System.Xml.Serialization
 {
@@ -23,8 +21,6 @@ namespace System.Xml.Serialization
     using System.Reflection.Emit;
     using System.Text.RegularExpressions;
     using System.Xml.Extensions;
-    using Hashtable = System.Collections.Generic.Dictionary<object, object>;
-    using DictionaryEntry = System.Collections.Generic.KeyValuePair<object, object>;
     using XmlSchema = System.ServiceModel.Dispatcher.XmlSchemaConstants;
     using XmlDeserializationEvents = System.Object;
 
@@ -110,6 +106,7 @@ namespace System.Xml.Serialization
 
         private string _charID;
         private string _guidID;
+        private string _timeSpanID;
 
 
 
@@ -226,6 +223,7 @@ namespace System.Xml.Serialization
             _oldTimeInstantID = _r.NameTable.Add("timeInstant");
             _charID = _r.NameTable.Add("char");
             _guidID = _r.NameTable.Add("guid");
+            _timeSpanID = _r.NameTable.Add("TimeSpan");
             _base64ID = _r.NameTable.Add("base64");
 
             _anyURIID = _r.NameTable.Add("anyURI");
@@ -329,7 +327,7 @@ namespace System.Xml.Serialization
 
         private byte[] ReadByteArray(bool isBase64)
         {
-            ArrayList list = new ArrayList();
+            var list = new List<byte[]>();
             const int MAX_ALLOC_SIZE = 64 * 1024;
             int currentSize = 1024;
             byte[] buffer;
@@ -531,6 +529,8 @@ namespace System.Xml.Serialization
                     value = ToChar(ReadStringValue());
                 else if ((object)type.Name == (object)_guidID)
                     value = new Guid(CollapseWhitespace(ReadStringValue()));
+                else if ((object)type.Name == (object)_timeSpanID)
+                    value = XmlConvert.ToTimeSpan(ReadStringValue());
                 else
                     value = ReadXmlNodes(elementCanBeType);
             }
@@ -627,6 +627,8 @@ namespace System.Xml.Serialization
                     value = default(Nullable<char>);
                 else if ((object)type.Name == (object)_guidID)
                     value = default(Nullable<Guid>);
+                else if ((object) type.Name == (object) _timeSpanID)
+                    value = default(Nullable<TimeSpan>);
                 else
                     value = null;
             }
@@ -1107,11 +1109,11 @@ namespace System.Xml.Serialization
         }
 
         // 0x6018
-        private static uint IsTextualNodeBitmap = (1 << (int)XmlNodeType.Text) | (1 << (int)XmlNodeType.CDATA) | (1 << (int)XmlNodeType.Whitespace) | (1 << (int)XmlNodeType.SignificantWhitespace);
+        private static uint s_isTextualNodeBitmap = (1 << (int)XmlNodeType.Text) | (1 << (int)XmlNodeType.CDATA) | (1 << (int)XmlNodeType.Whitespace) | (1 << (int)XmlNodeType.SignificantWhitespace);
 
         private static bool IsTextualNode(XmlNodeType nodeType)
         {
-            return 0 != (IsTextualNodeBitmap & (1 << (int)nodeType));
+            return 0 != (s_isTextualNodeBitmap & (1 << (int)nodeType));
         }
 
         /// <include file='doc\XmlSerializationReader.uex' path='docs/doc[@for="XmlSerializationReader.ReadString"]/*' />
@@ -1196,7 +1198,7 @@ namespace System.Xml.Serialization
 
         private object ReadXmlNodes(bool elementCanBeType)
         {
-            ArrayList xmlNodeList = new ArrayList();
+            var xmlNodeList = new List<XmlNode>();
             string elemLocalName = Reader.LocalName;
             string elemNs = Reader.NamespaceURI;
             string elemName = Reader.Name;
@@ -1283,7 +1285,7 @@ namespace System.Xml.Serialization
             if (xmlNodeList.Count <= skippableNodeCount)
                 return new object();
 
-            XmlNode[] childNodes = (XmlNode[])xmlNodeList.ToArray(typeof(XmlNode));
+            XmlNode[] childNodes = xmlNodeList.ToArray();
 
             UnknownNode(unknownNode, null, null);
             return childNodes;

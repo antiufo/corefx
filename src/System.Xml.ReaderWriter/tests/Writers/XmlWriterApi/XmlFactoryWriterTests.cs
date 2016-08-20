@@ -1,16 +1,13 @@
-// Copyright (c) Microsoft. All rights reserved.
-// Licensed under the MIT license. See LICENSE file in the project root for full license information.
+// Licensed to the .NET Foundation under one or more agreements.
+// The .NET Foundation licenses this file to you under the MIT license.
+// See the LICENSE file in the project root for more information.
 
-using System;
-using System.Globalization;
-using System.Xml;
-using System.Text;
-using System.IO;
 using OLEDB.Test.ModuleCore;
+using System.IO;
+using System.Text;
 using XmlCoreTest.Common;
-using System.Reflection;
 
-namespace XmlWriterAPI.Test
+namespace System.Xml.Tests
 {
     //[TestCase(Name="XmlWriterSettings: Default Values", Pri=0)]
     public partial class TCDefaultWriterSettings : XmlFactoryWriterTestCaseBase
@@ -1047,7 +1044,7 @@ namespace XmlWriterAPI.Test
             w.WriteString("\r");
             w.WriteEndElement();
             w.Dispose();
-            return CompareString("<root>\xD\xA</root>") ? TEST_PASS : TEST_FAIL;
+            return CompareString("<root>" + w.Settings.NewLineChars + "</root>") ? TEST_PASS : TEST_FAIL;
         }
 
         //[Variation(id=2, Desc="Test for LF (xA) inside element when NewLineHandling = Replace", Pri=0)]
@@ -1058,7 +1055,7 @@ namespace XmlWriterAPI.Test
             w.WriteString("\n");
             w.WriteEndElement();
             w.Dispose();
-            return CompareString("<root>\xD\xA</root>") ? TEST_PASS : TEST_FAIL;
+            return CompareString("<root>" + w.Settings.NewLineChars + "</root>") ? TEST_PASS : TEST_FAIL;
         }
 
         //[Variation(id=3, Desc="Test for CR LF (xD xA) inside element when NewLineHandling = Replace", Pri=0)]
@@ -1069,7 +1066,7 @@ namespace XmlWriterAPI.Test
             w.WriteString("\r\n");
             w.WriteEndElement();
             w.Dispose();
-            return CompareString("<root>\xD\xA</root>") ? TEST_PASS : TEST_FAIL;
+            return CompareString("<root>" + w.Settings.NewLineChars + "</root>") ? TEST_PASS : TEST_FAIL;
         }
 
         //[Variation(id=4, Desc="Test for CR (xD) inside element when NewLineHandling = Entitize", Pri=0)]
@@ -1396,7 +1393,7 @@ namespace XmlWriterAPI.Test
             w.WriteEndElement();
             w.WriteEndElement();
             w.Dispose();
-            return CompareString("<Root>\xD\xA  <child />\xD\xA</Root>") ? TEST_PASS : TEST_FAIL;
+            return CompareString("<Root>" + wSettings.NewLineChars + "  <child />" + wSettings.NewLineChars + "</Root>") ? TEST_PASS : TEST_FAIL;
         }
 
         //[Variation(id=3, Desc="Indent = false, element content is empty", Pri=0)]
@@ -1501,7 +1498,7 @@ namespace XmlWriterAPI.Test
             w.WriteElementString("foo", "");
             w.WriteEndElement();
             w.Dispose();
-            CError.Compare(CompareString("<?xml version=\"1.0\"?>\xD\xA<!DOCTYPE root [foo]>\xD\xA<root>\xD\xA  <?pi pi?>\xD\xA  <!--comment-->\xD\xA  <foo />\xD\xA</root>"), "");
+            CError.Compare(CompareString("<?xml version=\"1.0\"?>" + wSettings.NewLineChars + "<!DOCTYPE root [foo]>" + wSettings.NewLineChars + "<root>" + wSettings.NewLineChars + "  <?pi pi?>" + wSettings.NewLineChars + "  <!--comment-->" + wSettings.NewLineChars + "  <foo />" + wSettings.NewLineChars + "</root>"), "");
             return TEST_PASS;
         }
 
@@ -1523,7 +1520,7 @@ namespace XmlWriterAPI.Test
             w.WriteStartElement("foo");
             w.WriteElementString("bar", "text2");
             w.Dispose();
-            CError.Compare(CompareString("<master>\xD\xA  <root>\xD\xA    <foo>text</foo>\xD\xA  </root>text<foo><bar>text2</bar></foo></master>"), "");
+            CError.Compare(CompareString("<master>" + wSettings.NewLineChars + "  <root>" + wSettings.NewLineChars + "    <foo>text</foo>" + wSettings.NewLineChars + "  </root>text<foo><bar>text2</bar></foo></master>"), "");
             return TEST_PASS;
         }
 
@@ -1609,7 +1606,7 @@ namespace XmlWriterAPI.Test
             w.WriteStartElement("e4");
             w.WriteEndDocument();
             w.Dispose();
-            CError.Compare(CompareString("<e1>\xD\xA  <e2>\xD\xA    <e3>\xD\xA      <e4 />\xD\xA    </e3>\xD\xA  </e2>\xD\xA</e1>"), "");
+            CError.Compare(CompareString("<e1>" + wSettings.NewLineChars + "  <e2>" + wSettings.NewLineChars + "    <e3>" + wSettings.NewLineChars + "      <e4 />" + wSettings.NewLineChars + "    </e3>" + wSettings.NewLineChars + "  </e2>" + wSettings.NewLineChars + "</e1>"), "");
             return TEST_PASS;
         }
 
@@ -1630,7 +1627,7 @@ namespace XmlWriterAPI.Test
             w.WriteEndElement();
             w.WriteEndElement();
             w.Dispose();
-            CError.Compare(CompareString("<e1>\xD\xA  <e2>\xD\xA    <e3>\xD\xA      <e4 />\xD\xA    </e3>\xD\xA  </e2>\xD\xA</e1>"), "");
+            CError.Compare(CompareString("<e1>" + wSettings.NewLineChars + "  <e2>" + wSettings.NewLineChars + "    <e3>" + wSettings.NewLineChars + "      <e4 />" + wSettings.NewLineChars + "    </e3>" + wSettings.NewLineChars + "  </e2>" + wSettings.NewLineChars + "</e1>"), "");
             return TEST_PASS;
         }
 
@@ -1651,7 +1648,7 @@ namespace XmlWriterAPI.Test
             w.WriteFullEndElement();
             w.WriteFullEndElement();
             w.Dispose();
-            CError.Compare(CompareString("<e1>\xD\xA  <e2>\xD\xA    <e3>\xD\xA      <e4></e4>\xD\xA    </e3>\xD\xA  </e2>\xD\xA</e1>"), "");
+            CError.Compare(CompareString("<e1>" + wSettings.NewLineChars + "  <e2>" + wSettings.NewLineChars + "    <e3>" + wSettings.NewLineChars + "      <e4></e4>" + wSettings.NewLineChars + "    </e3>" + wSettings.NewLineChars + "  </e2>" + wSettings.NewLineChars + "</e1>"), "");
             return TEST_PASS;
         }
 
@@ -1670,7 +1667,7 @@ namespace XmlWriterAPI.Test
             w.WriteComment("c");
             w.WriteProcessingInstruction("pi", "pi");
             w.Dispose();
-            CError.Compare(CompareString("<root />\xD\xA<!--c-->\xD\xA<?pi pi?>  <!--c--><?pi pi?>"), "");
+            CError.Compare(CompareString("<root />" + wSettings.NewLineChars + "<!--c-->" + wSettings.NewLineChars + "<?pi pi?>  <!--c--><?pi pi?>"), "");
             return TEST_PASS;
         }
 
@@ -1688,7 +1685,7 @@ namespace XmlWriterAPI.Test
             w.WriteAttributeString("a2", "value");
             w.WriteEndDocument();
             w.Dispose();
-            CError.Compare(CompareString("<root a1=\"value\">\xD\xA  <foo a2=\"value\" />\xD\xA</root>"), "");
+            CError.Compare(CompareString("<root a1=\"value\">" + wSettings.NewLineChars + "  <foo a2=\"value\" />" + wSettings.NewLineChars + "</root>"), "");
             return TEST_PASS;
         }
 
@@ -1704,7 +1701,7 @@ namespace XmlWriterAPI.Test
             w.WriteProcessingInstruction("pi", "value");
             w.WriteStartElement("root");
             w.Dispose();
-            CError.Compare(CompareString("<?pi value?>\xD\xA<root />"), "");
+            CError.Compare(CompareString("<?pi value?>" + wSettings.NewLineChars + "<root />"), "");
             return TEST_PASS;
         }
 
@@ -1720,7 +1717,7 @@ namespace XmlWriterAPI.Test
             w.WriteComment("value");
             w.WriteStartElement("root");
             w.Dispose();
-            CError.Compare(CompareString("<!--value-->\xD\xA<root />"), "");
+            CError.Compare(CompareString("<!--value-->" + wSettings.NewLineChars + "<root />"), "");
             return TEST_PASS;
         }
 
@@ -1782,7 +1779,7 @@ namespace XmlWriterAPI.Test
                 w.WriteString("text");
                 w.WriteStartElement("a");
             }
-            CError.Compare(CompareString("<root>\xD\xA  <child>\xD\xA    <a />text<a /></child>\xD\xA</root>"), "");
+            CError.Compare(CompareString("<root>" + wSettings.NewLineChars + "  <child>" + wSettings.NewLineChars + "    <a />text<a /></child>" + wSettings.NewLineChars + "</root>"), "");
             return TEST_PASS;
         }
 
@@ -1844,7 +1841,7 @@ namespace XmlWriterAPI.Test
                 }
                 w.WriteStartElement("root");
                 w.Dispose();
-                string expectedResult = string.Format("<?xml version=\"1.0\" encoding=\"{0}\"?>\xD\xA<root />", encoding.WebName);
+                string expectedResult = string.Format("<?xml version=\"1.0\" encoding=\"{0}\"?>" + wSettings.NewLineChars + "<root />", encoding.WebName);
                 CError.Compare(CompareString(expectedResult), "");
             }
             return TEST_PASS;
@@ -1870,7 +1867,7 @@ namespace XmlWriterAPI.Test
                 w.WriteEndElement();
                 w.WriteEndElement();
             }
-            CError.Compare(CompareString("<root>\xD\xA  <e1>\xD\xA    <e2 />text</e1>\xD\xA</root>"), "");
+            CError.Compare(CompareString("<root>" + wSettings.NewLineChars + "  <e1>" + wSettings.NewLineChars + "    <e2 />text</e1>" + wSettings.NewLineChars + "</root>"), "");
             return TEST_PASS;
         }
 
@@ -1890,7 +1887,7 @@ namespace XmlWriterAPI.Test
                 w.WriteStartElement("root");
                 w.WriteEndElement();
             }
-            CError.Compare(CompareString("<?xml version=\"1.0\" encoding=\"UTF-8\"?>\xD\xA<?piname1 pitext1?>\xD\xA<?piname2 pitext2?>\xD\xA<root />"), "");
+            CError.Compare(CompareString("<?xml version=\"1.0\" encoding=\"UTF-8\"?>" + wSettings.NewLineChars + "<?piname1 pitext1?>" + wSettings.NewLineChars + "<?piname2 pitext2?>" + wSettings.NewLineChars + "<root />"), "");
             return TEST_PASS;
         }
 
@@ -1910,7 +1907,7 @@ namespace XmlWriterAPI.Test
                 w.WriteProcessingInstruction("piname2", "pitext2");
                 w.WriteStartElement("root");
             }
-            CError.Compare(CompareString("<?xml version=\"1.0\" encoding=\"UTF-8\"?>\xD\xA<!DOCTYPE name PUBLIC \"publicid\" \"systemid\"[subset]>\xD\xA<?piname1 pitext1?>\xD\xA<?piname2 pitext2?>\xD\xA<root />"), "");
+            CError.Compare(CompareString("<?xml version=\"1.0\" encoding=\"UTF-8\"?>" + wSettings.NewLineChars + "<!DOCTYPE name PUBLIC \"publicid\" \"systemid\"[subset]>" + wSettings.NewLineChars + "<?piname1 pitext1?>" + wSettings.NewLineChars + "<?piname2 pitext2?>" + wSettings.NewLineChars + "<root />"), "");
             return TEST_PASS;
         }
 
@@ -1948,7 +1945,7 @@ namespace XmlWriterAPI.Test
                 w.WriteEndElement();
                 w.WriteEndElement();
             }
-            CError.Compare(CompareString("<?piname1 pitext1?>\xD\xA<!--comment1-->\xD\xA<?piname2 pitext2?>\xD\xA<root>\xD\xA  <e1>\xD\xA    <e2>\xD\xA      <e3>\xD\xA        <e4 />text1<?piname3 pitext3?></e3>\xD\xA      <!--comment2--><![CDATA[cdata1]]>text2<?piname4 pitext4?><![CDATA[cdata2]]><!--comment3--><?piname5 pitext5?></e2>\xD\xA  </e1>\xD\xA</root>"), "");
+            CError.Compare(CompareString("<?piname1 pitext1?>" + wSettings.NewLineChars + "<!--comment1-->" + wSettings.NewLineChars + "<?piname2 pitext2?>" + wSettings.NewLineChars + "<root>" + wSettings.NewLineChars + "  <e1>" + wSettings.NewLineChars + "    <e2>" + wSettings.NewLineChars + "      <e3>" + wSettings.NewLineChars + "        <e4 />text1<?piname3 pitext3?></e3>" + wSettings.NewLineChars + "      <!--comment2--><![CDATA[cdata1]]>text2<?piname4 pitext4?><![CDATA[cdata2]]><!--comment3--><?piname5 pitext5?></e2>" + wSettings.NewLineChars + "  </e1>" + wSettings.NewLineChars + "</root>"), "");
             return TEST_PASS;
         }
     }
@@ -1983,7 +1980,7 @@ namespace XmlWriterAPI.Test
             w.WriteEndElement();
             w.Dispose();
 
-            return CompareString("<root>\xD\xA\x9<child />\xD\xA</root>") ? TEST_PASS : TEST_FAIL;
+            return CompareString("<root>" + wSettings.NewLineChars + "\x9<child />" + wSettings.NewLineChars + "</root>") ? TEST_PASS : TEST_FAIL;
         }
 
         //[Variation(id=2, Desc="Set to multiple whitespace chars", Pri=0)]
@@ -2002,7 +1999,7 @@ namespace XmlWriterAPI.Test
             w.WriteEndElement();
             w.Dispose();
 
-            return CompareString("<root>\xD\xA     <child />\xD\xA</root>") ? TEST_PASS : TEST_FAIL;
+            return CompareString("<root>" + wSettings.NewLineChars + "     <child />" + wSettings.NewLineChars + "</root>") ? TEST_PASS : TEST_FAIL;
         }
 
         //[Variation(id=3, Desc="Set to 0xA", Pri=0)]
@@ -2021,7 +2018,7 @@ namespace XmlWriterAPI.Test
             w.WriteEndElement();
             w.Dispose();
 
-            return CompareString("<root>\xD\xA\xA<child />\xD\xA</root>") ? TEST_PASS : TEST_FAIL;
+            return CompareString("<root>" + wSettings.NewLineChars + "\xA<child />" + wSettings.NewLineChars + "</root>") ? TEST_PASS : TEST_FAIL;
         }
 
         //[Variation(id=4, Desc="Set to 0xD", Pri=0)]
@@ -2040,7 +2037,7 @@ namespace XmlWriterAPI.Test
             w.WriteEndElement();
             w.Dispose();
 
-            return CompareString("<root>\xD\xA\xD<child />\xD\xA</root>") ? TEST_PASS : TEST_FAIL;
+            return CompareString("<root>" + wSettings.NewLineChars + "\xD<child />" + wSettings.NewLineChars + "</root>") ? TEST_PASS : TEST_FAIL;
         }
 
         //[Variation(id=5, Desc="Set to 0x20", Pri=0)]
@@ -2059,7 +2056,7 @@ namespace XmlWriterAPI.Test
             w.WriteEndElement();
             w.Dispose();
 
-            return CompareString("<root>\xD\xA\x20<child />\xD\xA</root>") ? TEST_PASS : TEST_FAIL;
+            return CompareString("<root>" + wSettings.NewLineChars + "\x20<child />" + wSettings.NewLineChars + "</root>") ? TEST_PASS : TEST_FAIL;
         }
 
         //[Variation(id=6, Desc="Set to element start tag", Pri=1, Param="<")]
@@ -2137,7 +2134,7 @@ namespace XmlWriterAPI.Test
             w.WriteEndElement();
             w.Dispose();
 
-            return CompareString("<root\xD\xA  attr1=\"value1\"\xD\xA  attr2=\"value2\" />") ? TEST_PASS : TEST_FAIL;
+            return CompareString("<root" + wSettings.NewLineChars + "  attr1=\"value1\"" + wSettings.NewLineChars + "  attr2=\"value2\" />") ? TEST_PASS : TEST_FAIL;
         }
 
         //[Variation(id=3, Desc="Attributes of nested elements", Pri=1)]
@@ -2255,7 +2252,7 @@ namespace XmlWriterAPI.Test
                     wSettings.Encoding = Encoding.Unicode;
                     break;
             }
-            Stream writerStream = FilePathUtil.getStream("writer.out"); /*new FileStream("writer.out", FileMode.Create);*/
+            Stream writerStream = new MemoryStream();
             switch (CurVariation.Param.ToString())
             {
                 case "Stream":

@@ -1,14 +1,12 @@
-// Copyright (c) Microsoft. All rights reserved.
-// Licensed under the MIT license. See LICENSE file in the project root for full license information.
+// Licensed to the .NET Foundation under one or more agreements.
+// The .NET Foundation licenses this file to you under the MIT license.
+// See the LICENSE file in the project root for more information.
 
-using System;
-using System.IO;
-using System.Xml;
-using System.Collections;
 using OLEDB.Test.ModuleCore;
+using System.IO;
 using XmlCoreTest.Common;
 
-namespace NameTableTest
+namespace System.Xml.Tests
 {
     ////////////////////////////////////////////////////////////////
     // Module
@@ -31,11 +29,11 @@ namespace NameTableTest
         {
             int ret = base.Init(objParam);
 
-            _TestData = Path.Combine(FilePathUtil.GetTestDataPath(), @"XmlReader\");
+            _TestData = Path.Combine(FilePathUtil.GetTestDataPath(), @"XmlReader");
 
             // Create global usage test files
             string strFile = String.Empty;
-            TestFiles.CreateTestFile(ref strFile, EREADER_TYPE.GENERIC);
+            NameTable_TestFiles.CreateTestFile(ref strFile, EREADER_TYPE.GENERIC);
 
             return ret;
         }
@@ -117,7 +115,7 @@ namespace NameTableTest
                 DataReader.Dispose();
             }
 
-            string strFile = TestFiles.GetTestFileName(EREADER_TYPE.GENERIC);
+            string strFile = NameTable_TestFiles.GetTestFileName(EREADER_TYPE.GENERIC);
             DataReader = XmlReader.Create(FilePathUtil.getStream(strFile), new XmlReaderSettings() { DtdProcessing = DtdProcessing.Ignore });//new XmlTextReader(strFile);
         }
 
@@ -331,7 +329,7 @@ namespace NameTableTest
         public int Variation_10()
         {
             string filename = null;
-            TestFiles.CreateTestFile(ref filename, EREADER_TYPE.BIG_ELEMENT_SIZE);
+            NameTable_TestFiles.CreateTestFile(ref filename, EREADER_TYPE.BIG_ELEMENT_SIZE);
             XmlReader rDataReader = XmlReader.Create(FilePathUtil.getStream(filename));
 
             while (rDataReader.Read() == true) ;
@@ -776,7 +774,7 @@ namespace NameTableTest
             // Add strings again and verify
 
             string filename = null;
-            TestFiles.CreateTestFile(ref filename, EREADER_TYPE.BIG_ELEMENT_SIZE);
+            NameTable_TestFiles.CreateTestFile(ref filename, EREADER_TYPE.BIG_ELEMENT_SIZE);
             XmlReader rDataReader = XmlReader.Create(FilePathUtil.getStream(filename));
             while (rDataReader.Read() == true) ;
             XmlNameTable nt = rDataReader.NameTable;
@@ -792,7 +790,7 @@ namespace NameTableTest
             CError.Compare(objActual1, nt.Get(strTest), "Comparing objActual1 and GetString");
             CError.Compare(objActual1, nt.Add(strTest), "Comparing objActual1 and AddString");
 
-            TestFiles.RemoveDataReader(EREADER_TYPE.BIG_ELEMENT_SIZE);
+            NameTable_TestFiles.RemoveDataReader(EREADER_TYPE.BIG_ELEMENT_SIZE);
 
             return TEST_PASS;
         }
@@ -945,7 +943,7 @@ namespace NameTableTest
         }
 
 
-        [Variation("Add new string, get object using permutations of upper & lowecase, should be null", Pri = 0)]
+        [Variation("Add new string, get object using permutations of upper & lowercase, should be null", Pri = 0)]
         public int Variation_17()
         {
             ReloadSource();

@@ -1,5 +1,6 @@
-// Copyright (c) Microsoft. All rights reserved.
-// Licensed under the MIT license. See LICENSE file in the project root for full license information.
+// Licensed to the .NET Foundation under one or more agreements.
+// The .NET Foundation licenses this file to you under the MIT license.
+// See the LICENSE file in the project root for more information.
 
 using System;
 using System.IO;
@@ -25,12 +26,12 @@ namespace System.Security.Cryptography.X509Certificates
         {
         }
 
-        public X509Certificate2(byte[] rawData, String password)
+        public X509Certificate2(byte[] rawData, string password)
             : base(rawData, password)
         {
         }
 
-        public X509Certificate2(byte[] rawData, String password, X509KeyStorageFlags keyStorageFlags)
+        public X509Certificate2(byte[] rawData, string password, X509KeyStorageFlags keyStorageFlags)
             : base(rawData, password, keyStorageFlags)
         {
         }
@@ -45,17 +46,17 @@ namespace System.Security.Cryptography.X509Certificates
         {
         }
 
-        public X509Certificate2(String fileName)
+        public X509Certificate2(string fileName)
             : base(fileName)
         {
         }
 
-        public X509Certificate2(String fileName, String password)
+        public X509Certificate2(string fileName, string password)
             : base(fileName, password)
         {
         }
 
-        public X509Certificate2(String fileName, String password, X509KeyStorageFlags keyStorageFlags)
+        public X509Certificate2(string fileName, string password, X509KeyStorageFlags keyStorageFlags)
             : base(fileName, password, keyStorageFlags)
         {
         }
@@ -106,7 +107,7 @@ namespace System.Security.Cryptography.X509Certificates
             }
         }
 
-        public String FriendlyName
+        public string FriendlyName
         {
             get
             {
@@ -165,7 +166,7 @@ namespace System.Security.Cryptography.X509Certificates
                 PublicKey publicKey = _lazyPublicKey;
                 if (publicKey == null)
                 {
-                    String keyAlgorithmOid = GetKeyAlgorithm();
+                    string keyAlgorithmOid = GetKeyAlgorithm();
                     byte[] parameters = GetKeyAlgorithmParameters();
                     byte[] keyValue = GetPublicKey();
                     Oid oid = new Oid(keyAlgorithmOid);
@@ -190,7 +191,7 @@ namespace System.Security.Cryptography.X509Certificates
             }
         }
 
-        public String SerialNumber
+        public string SerialNumber
         {
             get
             {
@@ -209,7 +210,7 @@ namespace System.Security.Cryptography.X509Certificates
                 Oid signatureAlgorithm = _lazySignatureAlgorithm;
                 if (signatureAlgorithm == null)
                 {
-                    String oidValue = Pal.SignatureAlgorithm;
+                    string oidValue = Pal.SignatureAlgorithm;
                     signatureAlgorithm = _lazySignatureAlgorithm = Oid.FromOidValue(oidValue, OidGroup.SignatureAlgorithm);
                 }
                 return signatureAlgorithm;
@@ -229,7 +230,7 @@ namespace System.Security.Cryptography.X509Certificates
             }
         }
 
-        public String Thumbprint
+        public string Thumbprint
         {
             get
             {
@@ -254,34 +255,34 @@ namespace System.Security.Cryptography.X509Certificates
         public static X509ContentType GetCertContentType(byte[] rawData)
         {
             if (rawData == null || rawData.Length == 0)
-                throw new ArgumentException(SR.Arg_EmptyOrNullArray, "rawData");
+                throw new ArgumentException(SR.Arg_EmptyOrNullArray, nameof(rawData));
 
             return X509Pal.Instance.GetCertContentType(rawData);
         }
 
-        public static X509ContentType GetCertContentType(String fileName)
+        public static X509ContentType GetCertContentType(string fileName)
         {
             if (fileName == null)
-                throw new ArgumentNullException("fileName");
+                throw new ArgumentNullException(nameof(fileName));
 
             // Desktop compat: The desktop CLR expands the filename to a full path for the purpose of performing a CAS permission check. While CAS is not present here,
             // we still need to call GetFullPath() so we get the same exception behavior if the fileName is bad.
-            String fullPath = Path.GetFullPath(fileName);
+            string fullPath = Path.GetFullPath(fileName);
 
             return X509Pal.Instance.GetCertContentType(fileName);
         }
 
-        public String GetNameInfo(X509NameType nameType, bool forIssuer)
+        public string GetNameInfo(X509NameType nameType, bool forIssuer)
         {
             return Pal.GetNameInfo(nameType, forIssuer);
         }
 
-        public override String ToString()
+        public override string ToString()
         {
             return base.ToString(fVerbose: true);
         }
 
-        public override String ToString(bool verbose)
+        public override string ToString(bool verbose)
         {
             if (verbose == false || Pal == null)
                 return ToString();
@@ -299,7 +300,7 @@ namespace System.Security.Cryptography.X509Certificates
             sb.AppendLine("[Subject]");
             sb.Append("  ");
             sb.Append(SubjectName.Name);
-            String simpleName = GetNameInfo(X509NameType.SimpleName, false);
+            string simpleName = GetNameInfo(X509NameType.SimpleName, false);
             if (simpleName.Length > 0)
             {
                 sb.AppendLine();
@@ -307,7 +308,7 @@ namespace System.Security.Cryptography.X509Certificates
                 sb.Append("Simple Name: ");
                 sb.Append(simpleName);
             }
-            String emailName = GetNameInfo(X509NameType.EmailName, false);
+            string emailName = GetNameInfo(X509NameType.EmailName, false);
             if (emailName.Length > 0)
             {
                 sb.AppendLine();
@@ -315,7 +316,7 @@ namespace System.Security.Cryptography.X509Certificates
                 sb.Append("Email Name: ");
                 sb.Append(emailName);
             }
-            String upnName = GetNameInfo(X509NameType.UpnName, false);
+            string upnName = GetNameInfo(X509NameType.UpnName, false);
             if (upnName.Length > 0)
             {
                 sb.AppendLine();
@@ -323,7 +324,7 @@ namespace System.Security.Cryptography.X509Certificates
                 sb.Append("UPN Name: ");
                 sb.Append(upnName);
             }
-            String dnsName = GetNameInfo(X509NameType.DnsName, false);
+            string dnsName = GetNameInfo(X509NameType.DnsName, false);
             if (dnsName.Length > 0)
             {
                 sb.AppendLine();
@@ -486,10 +487,14 @@ namespace System.Security.Cryptography.X509Certificates
 
         private static X509Extension CreateCustomExtensionIfAny(Oid oid)
         {
-            String oidValue = oid.Value;
+            string oidValue = oid.Value;
             switch (oidValue)
             {
                 case Oids.BasicConstraints:
+                    return X509Pal.Instance.SupportsLegacyBasicConstraintsExtension ?
+                        new X509BasicConstraintsExtension() :
+                        null;
+
                 case Oids.BasicConstraints2:
                     return new X509BasicConstraintsExtension();
 

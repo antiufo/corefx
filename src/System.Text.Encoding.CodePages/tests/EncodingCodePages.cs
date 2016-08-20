@@ -1,14 +1,13 @@
-// Copyright (c) Microsoft. All rights reserved.
-// Licensed under the MIT license. See LICENSE file in the project root for full license information.
+// Licensed to the .NET Foundation under one or more agreements.
+// The .NET Foundation licenses this file to you under the MIT license.
+// See the LICENSE file in the project root for more information.
 
-using System;
 using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
-using System.Text;
 using Xunit;
 
-namespace Test
+namespace System.Text.Tests
 {
     public class EncodingTest : IClassFixture<CultureSetup>
     {
@@ -281,6 +280,7 @@ namespace Test
             yield return new object[] { 20924, "ibm00924", "ccsid00924" };
             yield return new object[] { 20924, "ibm00924", "cp00924" };
             yield return new object[] { 20924, "ibm00924", "ebcdic-latin9--euro" };
+            yield return new object[] { 20932, "euc-jp", "euc-jp" };
             yield return new object[] { 20936, "x-cp20936", "x-cp20936" };
             yield return new object[] { 20949, "x-cp20949", "x-cp20949" };
             yield return new object[] { 21025, "cp1025", "cp1025" };
@@ -356,6 +356,7 @@ namespace Test
             yield return new object[] { 38598, "iso-8859-8-i", "iso-8859-8-i" };
             yield return new object[] { 50220, "iso-2022-jp", "iso-2022-jp" };
             yield return new object[] { 50221, "csiso2022jp", "csiso2022jp" };
+            yield return new object[] { 50222, "iso-2022-jp", "iso-2022-jp" };
             yield return new object[] { 50225, "iso-2022-kr", "iso-2022-kr" };
             yield return new object[] { 50225, "iso-2022-kr", "csiso2022kr" };
             yield return new object[] { 50225, "iso-2022-kr", "iso-2022-kr-7" };
@@ -453,7 +454,6 @@ namespace Test
         }
 
         [Fact]
-        [ActiveIssue(846, PlatformID.AnyUnix)]
         public static void TestDefaultEncodings()
         {
             ValidateDefaultEncodings();
@@ -513,7 +513,7 @@ namespace Test
         }
 
         [Theory]
-        [MemberData("SpecificCodepageEncodings")]
+        [MemberData(nameof(SpecificCodepageEncodings))]
         public static void TestRoundtrippingSpecificCodepageEncoding(string encodingName, byte[] bytes, string expected)
         {
             Encoding encoding = CodePagesEncodingProvider.Instance.GetEncoding(encodingName);
@@ -524,26 +524,39 @@ namespace Test
         }
 
         [Theory]
-        [MemberData("CodePageInfo")]
+        [MemberData(nameof(CodePageInfo))]
         public static void TestCodepageEncoding(int codePage, string webName, string queryString)
         {
-            Encoding encoding = CodePagesEncodingProvider.Instance.GetEncoding(queryString);
+            Encoding encoding;
+            // There are two names that have duplicate associated CodePages. For those two names,
+            // we have to test with the expectation that querying the name will always return the
+            // same codepage.
+            if (codePage != 20932 && codePage != 50222)
+            {
+                encoding = CodePagesEncodingProvider.Instance.GetEncoding(queryString);
+                Assert.Equal(encoding, CodePagesEncodingProvider.Instance.GetEncoding(codePage));
+                Assert.Equal(encoding, CodePagesEncodingProvider.Instance.GetEncoding(webName));
+            }
+            else
+            {
+                encoding = CodePagesEncodingProvider.Instance.GetEncoding(codePage);
+                Assert.NotEqual(encoding, CodePagesEncodingProvider.Instance.GetEncoding(queryString));
+                Assert.NotEqual(encoding, CodePagesEncodingProvider.Instance.GetEncoding(webName));
+            }
+
             Assert.NotNull(encoding);
             Assert.Equal(codePage, encoding.CodePage);
-            Assert.Equal(encoding, CodePagesEncodingProvider.Instance.GetEncoding(codePage));
             Assert.Equal(webName, encoding.WebName);
-            Assert.Equal(encoding, CodePagesEncodingProvider.Instance.GetEncoding(webName));
 
             // Small round-trip for ASCII alphanumeric range (some code pages use different punctuation!)
             // Start with space.
             string asciiPrintable = " 0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz";
-
             char[] traveled = encoding.GetChars(encoding.GetBytes(asciiPrintable));
             Assert.Equal(asciiPrintable.ToCharArray(), traveled);
         }
 
         [Theory]
-        [MemberData("MultibyteCharacterEncodings")]
+        [MemberData(nameof(MultibyteCharacterEncodings))]
         public static void TestSpecificMultibyteCharacterEncodings(string codepageName, byte[] bytes, int[] expected)
         {
             Decoder decoder = CodePagesEncodingProvider.Instance.GetEncoding(codepageName).GetDecoder();
@@ -558,7 +571,7 @@ namespace Test
         }
 
         [Theory]
-        [MemberData("CodePageInfo")]
+        [MemberData(nameof(CodePageInfo))]
         public static void TestEncodingDisplayNames(int codePage, string webName, string queryString)
         {
             var encoding = CodePagesEncodingProvider.Instance.GetEncoding(codePage);

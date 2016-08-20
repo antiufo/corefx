@@ -1,13 +1,13 @@
-// Copyright (c) Microsoft. All rights reserved.
-// Licensed under the MIT license. See LICENSE file in the project root for full license information.
+// Licensed to the .NET Foundation under one or more agreements.
+// The .NET Foundation licenses this file to you under the MIT license.
+// See the LICENSE file in the project root for more information.
 
-using Xunit;
-using System;
 using System.Collections.Generic;
-using System.Collections.ObjectModel;
 using System.Diagnostics;
+using System.Linq;
+using Xunit;
 
-namespace Test
+namespace System.Collections.ObjectModel.Tests
 {
     /// <summary>
     /// Tests the public properties and constructor in ObservableCollection<T>.
@@ -20,61 +20,47 @@ namespace Test
         [Fact]
         public static void ParameterlessConstructorTest()
         {
-            ObservableCollection<String> col = new ObservableCollection<String>();
-            Assert.NotNull(col);
+            var col = new ObservableCollection<string>();
             Assert.Equal(0, col.Count);
+            Assert.Empty(col);
         }
 
         /// <summary>
-        /// Tests that the Ienumerable constructor can take Ienumerable with items
-        /// and empty Ienumerable.
+        /// Tests that the IEnumerable constructor can various IEnumerables with items.
+        /// </summary>
+        [Theory]
+        [MemberData(nameof(Collections))]
+        public static void IEnumerableConstructorTest(IEnumerable<string> collection)
+        {
+            var actual = new ObservableCollection<string>(collection);
+            Assert.Equal(collection, actual);
+        }
+
+        public static readonly object[][] Collections =
+        {
+            new object[] { new string[] { "one", "two", "three" } },
+            new object[] { new List<string> { "one", "two", "three" } },
+            new object[] { new Collection<string> { "one", "two", "three" } },
+            new object[] { Enumerable.Range(1, 3).Select(i => i.ToString()) },
+            new object[] { CreateIteratorCollection() }
+        };
+
+        private static IEnumerable<string> CreateIteratorCollection()
+        {
+            yield return "one";
+            yield return "two";
+            yield return "three";
+        }
+
+        /// <summary>
+        /// Tests that the IEnumerable constructor can take an empty IEnumerable.
         /// </summary>
         [Fact]
-        public static void IEnumerableConstructorTest()
+        public static void IEnumerableConstructorTest_Empty()
         {
-            // Creating ObservableCollection with IEnumerable.
-            string[] expectedCol = { "one", "two", "three" };
-            ObservableCollection<String> actualCol = new ObservableCollection<String>((IEnumerable<String>)expectedCol);
-            Assert.NotNull(actualCol);
-            Assert.Equal(expectedCol.Length, actualCol.Count);
-
-            for (int i = 0; i < actualCol.Count; i++)
-            {
-                string item = actualCol[i];
-                bool contains = false;
-                for (int j = 0; j < expectedCol.Length; j++)
-                {
-                    if (item.Equals(expectedCol[j]))
-                    {
-                        contains = true;
-                        break;
-                    }
-                }
-                Assert.True(contains);
-            }
-
-            for (int i = 0; i < expectedCol.Length; i++)
-            {
-                string item = expectedCol[i];
-                bool contains = false;
-                for (int j = 0; j < actualCol.Count; j++)
-                {
-                    if (item.Equals(actualCol[j]))
-                    {
-                        contains = true;
-                        break;
-                    }
-                }
-                Assert.True(contains);
-            }
-
-            // Creating ObservableCollection with empty IEnumerable.
-            actualCol = new ObservableCollection<string>(new string[] { });
-            Assert.Equal(0, actualCol.Count);
-            foreach (var item in actualCol)
-            {
-                Assert.True(false, "Should not be able to iterate over an empty collection.");
-            }
+            var col = new ObservableCollection<string>(new string[] { });
+            Assert.Equal(0, col.Count);
+            Assert.Empty(col);
         }
 
         /// <summary>
@@ -83,7 +69,7 @@ namespace Test
         [Fact]
         public static void IEnumerableConstructorTest_Negative()
         {
-            Assert.Throws<ArgumentNullException>(() => new ObservableCollection<string>(null));
+            Assert.Throws<ArgumentNullException>("collection", () => new ObservableCollection<string>(null));
         }
 
         /// <summary>
@@ -92,8 +78,7 @@ namespace Test
         [Fact]
         public static void ItemTestSet()
         {
-            Guid[] anArray = { Guid.NewGuid(), Guid.NewGuid(), Guid.NewGuid() };
-            ObservableCollection<Guid> col = new ObservableCollection<Guid>((IEnumerable<Guid>)anArray);
+            var col = new ObservableCollection<Guid>(new[] { Guid.NewGuid(), Guid.NewGuid(), Guid.NewGuid() });
             for (int i = 0; i < col.Count; ++i)
             {
                 Guid guid = Guid.NewGuid();
@@ -102,46 +87,24 @@ namespace Test
             }
         }
 
-        /// <summary>
-        /// Tests that:
-        /// ArgumentOutOfRangeException is thrown when the Index is >= collection.Count
-        /// or Index < 0.
-        /// </summary>
-        [Fact]
-        public static void ItemTestSet_Negative()
+        [Theory]
+        [InlineData(0, 0)]
+        [InlineData(3, int.MinValue)]
+        [InlineData(3, -1)]
+        [InlineData(3, 3)]
+        [InlineData(3, 4)]
+        [InlineData(3, int.MaxValue)]
+        public static void ItemTestSet_Negative_InvalidIndex(int size, int index)
         {
-            // Negative index.
-            Guid[] anArray = { Guid.NewGuid(), Guid.NewGuid(), Guid.NewGuid() };
-            ObservableCollection<Guid> col = new ObservableCollection<Guid>((IEnumerable<Guid>)anArray);
-            int[] iArrInvalidValues = new Int32[] { -1, -2, -100, -1000, -10000, -100000, -1000000, -10000000, -100000000, -1000000000, Int32.MinValue };
-            Guid guid = Guid.Empty;
-            foreach (var index in iArrInvalidValues)
-            {
-                Assert.Throws<ArgumentOutOfRangeException>(() => guid = col[index]);
-            }
-
-            // Index not in the array.
-            anArray = new Guid[] { Guid.NewGuid(), Guid.NewGuid(), Guid.NewGuid() };
-            col = new ObservableCollection<Guid>((IEnumerable<Guid>)anArray);
-            guid = Guid.Empty;
-            int[] iArrLargeValues = new Int32[] { col.Count, Int32.MaxValue, Int32.MaxValue / 2, Int32.MaxValue / 10 };
-            foreach (var index in iArrLargeValues)
-            {
-                Assert.Throws<ArgumentOutOfRangeException>(() => guid = col[index]);
-            }
-
-            // Index not in the array when collection is empty.
-            col = new ObservableCollection<Guid>(new Guid[] { });
-            guid = Guid.Empty;
-            Assert.Throws<ArgumentOutOfRangeException>(() => guid = col[0]);
+            var col = new ObservableCollection<int>(new int[size]);
+            Assert.Throws<ArgumentOutOfRangeException>(() => col[index]);
         }
 
         // ICollection<T>.IsReadOnly
         [Fact]
         public static void IsReadOnlyTest()
         {
-            Guid[] anArray = { Guid.NewGuid(), Guid.NewGuid(), Guid.NewGuid() };
-            ObservableCollection<Guid> col = new ObservableCollection<Guid>((IEnumerable<Guid>)anArray);
+            var col = new ObservableCollection<Guid>(new[] { Guid.NewGuid(), Guid.NewGuid(), Guid.NewGuid() });
             Assert.False(((ICollection<Guid>)col).IsReadOnly);
         }
 
@@ -151,6 +114,5 @@ namespace Test
             DebuggerAttributes.ValidateDebuggerDisplayReferences(new ObservableCollection<int>());
             DebuggerAttributes.ValidateDebuggerTypeProxyProperties(new ObservableCollection<int>());
         }
-
     }
 }

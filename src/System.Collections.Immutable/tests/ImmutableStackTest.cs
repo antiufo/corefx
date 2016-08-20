@@ -1,5 +1,6 @@
-// Copyright (c) Microsoft. All rights reserved.
-// Licensed under the MIT license. See LICENSE file in the project root for full license information.
+// Licensed to the .NET Foundation under one or more agreements.
+// The .NET Foundation licenses this file to you under the MIT license.
+// See the LICENSE file in the project root for more information.
 
 using System.Collections.Generic;
 using System.Diagnostics;
@@ -7,7 +8,7 @@ using System.Diagnostics.Contracts;
 using System.Linq;
 using Xunit;
 
-namespace System.Collections.Immutable.Test
+namespace System.Collections.Immutable.Tests
 {
     public class ImmutableStackTest : SimpleElementImmutablesTestBase
     {
@@ -224,23 +225,23 @@ namespace System.Collections.Immutable.Test
         [Fact]
         public void Create()
         {
-            ImmutableStack<int> queue = ImmutableStack.Create<int>();
-            Assert.True(queue.IsEmpty);
+            ImmutableStack<int> stack = ImmutableStack.Create<int>();
+            Assert.True(stack.IsEmpty);
 
-            queue = ImmutableStack.Create(1);
-            Assert.False(queue.IsEmpty);
-            Assert.Equal(new[] { 1 }, queue);
+            stack = ImmutableStack.Create(1);
+            Assert.False(stack.IsEmpty);
+            Assert.Equal(new[] { 1 }, stack);
 
-            queue = ImmutableStack.Create(1, 2);
-            Assert.False(queue.IsEmpty);
-            Assert.Equal(new[] { 2, 1 }, queue);
+            stack = ImmutableStack.Create(1, 2);
+            Assert.False(stack.IsEmpty);
+            Assert.Equal(new[] { 2, 1 }, stack);
 
-            queue = ImmutableStack.CreateRange((IEnumerable<int>)new[] { 1, 2 });
-            Assert.False(queue.IsEmpty);
-            Assert.Equal(new[] { 2, 1 }, queue);
+            stack = ImmutableStack.CreateRange((IEnumerable<int>)new[] { 1, 2 });
+            Assert.False(stack.IsEmpty);
+            Assert.Equal(new[] { 2, 1 }, stack);
 
-            Assert.Throws<ArgumentNullException>(() => ImmutableStack.CreateRange((IEnumerable<int>)null));
-            Assert.Throws<ArgumentNullException>(() => ImmutableStack.Create((int[])null));
+            Assert.Throws<ArgumentNullException>("items", () => ImmutableStack.CreateRange((IEnumerable<int>)null));
+            Assert.Throws<ArgumentNullException>("items", () => ImmutableStack.Create((int[])null));
         }
 
         [Fact]

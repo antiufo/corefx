@@ -1,5 +1,6 @@
-// Copyright (c) Microsoft. All rights reserved.
-// Licensed under the MIT license. See LICENSE file in the project root for full license information.
+// Licensed to the .NET Foundation under one or more agreements.
+// The .NET Foundation licenses this file to you under the MIT license.
+// See the LICENSE file in the project root for more information.
 
 using System.Collections;
 using System.Collections.Generic;
@@ -73,7 +74,7 @@ namespace System.Net.Http.Headers
         {
             if (values == null)
             {
-                throw new ArgumentNullException("values");
+                throw new ArgumentNullException(nameof(values));
             }
             CheckHeaderName(name);
 
@@ -129,7 +130,7 @@ namespace System.Net.Http.Headers
         {
             if (values == null)
             {
-                throw new ArgumentNullException("values");
+                throw new ArgumentNullException(nameof(values));
             }
             if (!TryCheckHeaderName(name))
             {
@@ -470,7 +471,7 @@ namespace System.Net.Http.Headers
                         {
                             // Remove 'item' rather than 'value', since the 'comparer' may consider two values
                             // equal even though the default obj.Equals() may not (e.g. if 'comparer' does
-                            // case-insentive comparison for strings, but string.Equals() is case-sensitive).
+                            // case-insensitive comparison for strings, but string.Equals() is case-sensitive).
                             result = parsedValues.Remove(item);
                             break;
                         }
@@ -775,7 +776,7 @@ namespace System.Net.Http.Headers
                     // contain invalid newline chars. Reset RawValue.
                     info.RawValue = null;
 
-                    // During parsing, we removed tha value since it contains invalid newline chars. Return false to indicate that
+                    // During parsing, we removed the value since it contains invalid newline chars. Return false to indicate that
                     // this is an empty header. If the caller specified to remove empty headers, we'll remove the header before
                     // returning.
                     if ((info.InvalidValue == null) && (info.ParsedValue == null))
@@ -813,7 +814,7 @@ namespace System.Net.Http.Headers
                 {
                     if (!TryParseAndAddRawHeaderValue(name, info, rawValue, true))
                     {
-                        if (Logging.On) Logging.PrintWarning(Logging.Http, string.Format(System.Globalization.CultureInfo.InvariantCulture, SR.net_http_log_headers_invalid_value, name, rawValue));
+                        if (HttpEventSource.Log.IsEnabled()) HttpEventSource.Log.HeadersInvalidValue(name, rawValue);
                     }
                 }
             }
@@ -835,7 +836,7 @@ namespace System.Net.Http.Headers
             {
                 if (!TryParseAndAddRawHeaderValue(name, info, rawValue, true))
                 {
-                    if (Logging.On) Logging.PrintWarning(Logging.Http, string.Format(System.Globalization.CultureInfo.InvariantCulture, SR.net_http_log_headers_invalid_value, name, rawValue));
+                    if (HttpEventSource.Log.IsEnabled()) HttpEventSource.Log.HeadersInvalidValue(name, rawValue);
                 }
             }
         }
@@ -1118,7 +1119,7 @@ namespace System.Net.Http.Headers
         {
             if (string.IsNullOrEmpty(name))
             {
-                throw new ArgumentException(SR.net_http_argument_empty_string, "name");
+                throw new ArgumentException(SR.net_http_argument_empty_string, nameof(name));
             }
 
             if (HttpRuleParser.GetTokenLength(name, 0) != name.Length)
@@ -1169,7 +1170,7 @@ namespace System.Net.Http.Headers
         {
             if (HttpRuleParser.ContainsInvalidNewLine(value))
             {
-                if (Logging.On) Logging.PrintError(Logging.Http, string.Format(System.Globalization.CultureInfo.InvariantCulture, SR.net_http_log_headers_no_newlines, name, value));
+                if (NetEventSource.Log.IsEnabled()) NetEventSource.PrintError(NetEventSource.ComponentType.Http, string.Format(System.Globalization.CultureInfo.InvariantCulture, SR.net_http_log_headers_no_newlines, name, value));
                 return true;
             }
             return false;
@@ -1203,7 +1204,7 @@ namespace System.Net.Http.Headers
                 if (currentIndex < length)
                 {
                     string[] trimmedValues = new string[currentIndex];
-                    Array.Copy(values, trimmedValues, currentIndex);
+                    Array.Copy(values, 0, trimmedValues, 0, currentIndex);
                     values = trimmedValues;
                 }
             }
@@ -1343,7 +1344,7 @@ namespace System.Net.Http.Headers
                     // If the header only supports one value, and we have already a value set, then we can't add
                     // another value. E.g. the 'Date' header only supports one value. We can't add multiple timestamps
                     // to 'Date'.
-                    // So if this is a known header, ask the parser if it supports multiple values and check wheter
+                    // So if this is a known header, ask the parser if it supports multiple values and check whether
                     // we already have a (valid or invalid) value.
                     // Note that we ignore the rawValue by purpose: E.g. we are parsing 2 raw values for a header only 
                     // supporting 1 value. When the first value gets parsed, CanAddValue returns true and we add the

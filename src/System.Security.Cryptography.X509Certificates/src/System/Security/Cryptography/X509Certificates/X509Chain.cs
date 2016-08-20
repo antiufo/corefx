@@ -1,5 +1,6 @@
-// Copyright (c) Microsoft. All rights reserved.
-// Licensed under the MIT license. See LICENSE file in the project root for full license information.
+// Licensed to the .NET Foundation under one or more agreements.
+// The .NET Foundation licenses this file to you under the MIT license.
+// See the LICENSE file in the project root for more information.
 
 using System;
 using System.IO;
@@ -20,7 +21,6 @@ namespace System.Security.Cryptography.X509Certificates
         public X509Chain()
         {
             Reset();
-            return;
         }
 
         public X509ChainElementCollection ChainElements
@@ -39,7 +39,7 @@ namespace System.Security.Cryptography.X509Certificates
             set
             {
                 if (value == null)
-                    throw new ArgumentNullException("value");
+                    throw new ArgumentNullException(nameof(value));
                 _chainPolicy = value;
             }
         }
@@ -72,7 +72,7 @@ namespace System.Security.Cryptography.X509Certificates
             lock (_syncRoot)
             {
                 if (certificate == null)
-                    throw new ArgumentException(SR.Cryptography_InvalidContextHandle, "certificate");
+                    throw new ArgumentException(SR.Cryptography_InvalidContextHandle, nameof(certificate));
 
                 Reset();
 
@@ -124,14 +124,13 @@ namespace System.Security.Cryptography.X509Certificates
             _pal = null;
             if (pal != null)
                 pal.Dispose();
-            return;
         }
 
         private X509ChainPolicy _chainPolicy;
         private volatile X509ChainStatus[] _lazyChainStatus;
         private X509ChainElementCollection _chainElements;
         private IChainPal _pal;
-        private readonly Object _syncRoot = new Object();
+        private readonly object _syncRoot = new object();
     }
 }
 

@@ -1,5 +1,6 @@
-﻿// Copyright (c) Microsoft. All rights reserved.
-// Licensed under the MIT license. See LICENSE file in the project root for full license information.
+// Licensed to the .NET Foundation under one or more agreements.
+// The .NET Foundation licenses this file to you under the MIT license.
+// See the LICENSE file in the project root for more information.
 
 using System.Collections.Generic;
 using System.Diagnostics;
@@ -197,10 +198,10 @@ namespace System.Linq.Expressions.Compiler
                 return;
             }
 
-            if (node.Arguments.Count == 1)
+            if (node.ArgumentCount == 1)
             {
                 EmitExpression(node.Object);
-                EmitExpression(node.Arguments[0]);
+                EmitExpression(node.GetArgument(0));
                 _ilg.Emit(OpCodes.Ldelema, node.Type);
             }
             else
@@ -213,7 +214,7 @@ namespace System.Linq.Expressions.Compiler
         private void AddressOf(UnaryExpression node, Type type)
         {
             Debug.Assert(node.NodeType == ExpressionType.Unbox);
-            Debug.Assert(type.GetTypeInfo().IsValueType && !TypeUtils.IsNullableType(type));
+            Debug.Assert(type.GetTypeInfo().IsValueType);
 
             // Unbox leaves a pointer to the boxed value on the stack
             EmitExpression(node.Operand);
@@ -325,10 +326,12 @@ namespace System.Linq.Expressions.Compiler
             }
 
             // Emit indexes. We don't allow byref args, so no need to worry
-            // about writebacks or EmitAddress
-            List<LocalBuilder> args = new List<LocalBuilder>();
-            foreach (var arg in node.Arguments)
+            // about write-backs or EmitAddress
+            var n = node.ArgumentCount;
+            List<LocalBuilder> args = new List<LocalBuilder>(n);
+            for (var i = 0; i < n; i++)
             {
+                var arg = node.GetArgument(i);
                 EmitExpression(arg);
 
                 var argLocal = GetLocal(arg.Type);

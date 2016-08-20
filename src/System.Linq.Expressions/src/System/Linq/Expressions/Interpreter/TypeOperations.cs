@@ -1,5 +1,6 @@
-// Copyright (c) Microsoft. All rights reserved.
-// Licensed under the MIT license. See LICENSE file in the project root for full license information.
+// Licensed to the .NET Foundation under one or more agreements.
+// The .NET Foundation licenses this file to you under the MIT license.
+// See the LICENSE file in the project root for more information.
 
 using System;
 using System.Collections.Generic;
@@ -48,17 +49,17 @@ namespace System.Linq.Expressions.Interpreter
         }
     }
 
-    internal sealed class NewInstruction : Instruction
+    internal class NewInstruction : Instruction
     {
-        private readonly ConstructorInfo _constructor;
-        private readonly int _argCount;
+        protected readonly ConstructorInfo _constructor;
+        protected readonly int _argumentCount;
 
-        public NewInstruction(ConstructorInfo constructor)
+        public NewInstruction(ConstructorInfo constructor, int argumentCount)
         {
             _constructor = constructor;
-            _argCount = constructor.GetParameters().Length;
+            _argumentCount = argumentCount;
         }
-        public override int ConsumedStack { get { return _argCount; } }
+        public override int ConsumedStack { get { return _argumentCount; } }
         public override int ProducedStack { get { return 1; } }
         public override string InstructionName
         {
@@ -66,11 +67,9 @@ namespace System.Linq.Expressions.Interpreter
         }
         public override int Run(InterpretedFrame frame)
         {
-            object[] args = new object[_argCount];
-            for (int i = _argCount - 1; i >= 0; i--)
-            {
-                args[i] = frame.Pop();
-            }
+            int first = frame.StackIndex - _argumentCount;
+
+            var args = GetArgs(frame, first);
 
             object ret;
             try
@@ -82,8 +81,30 @@ namespace System.Linq.Expressions.Interpreter
                 ExceptionHelpers.UpdateForRethrow(e.InnerException);
                 throw e.InnerException;
             }
-            frame.Push(ret);
+
+            frame.Data[first] = ret;
+            frame.StackIndex = first + 1;
+
             return +1;
+        }
+
+        protected object[] GetArgs(InterpretedFrame frame, int first)
+        {
+            if (_argumentCount > 0)
+            {
+                var args = new object[_argumentCount];
+
+                for (int i = 0; i < args.Length; i++)
+                {
+                    args[i] = frame.Data[first + i];
+                }
+
+                return args;
+            }
+            else
+            {
+                return Array.Empty<object>();
+            }
         }
 
         public override string ToString()
@@ -92,32 +113,25 @@ namespace System.Linq.Expressions.Interpreter
         }
     }
 
-    internal partial class ByRefNewInstruction : Instruction
+    internal partial class ByRefNewInstruction : NewInstruction
     {
         private readonly ByRefUpdater[] _byrefArgs;
-        private readonly ConstructorInfo _constructor;
-        private readonly int _argCount;
 
-        internal ByRefNewInstruction(ConstructorInfo target, ByRefUpdater[] byrefArgs)
+        internal ByRefNewInstruction(ConstructorInfo target, int argumentCount, ByRefUpdater[] byrefArgs)
+            : base(target, argumentCount)
         {
-            _constructor = target;
-            _argCount = target.GetParameters().Length;
             _byrefArgs = byrefArgs;
         }
 
-        public override int ConsumedStack { get { return _argCount; } }
-        public override int ProducedStack { get { return 1; } }
         public override string InstructionName
         {
             get { return "ByRefNew"; }
         }
         public sealed override int Run(InterpretedFrame frame)
         {
-            object[] args = new object[_argCount];
-            for (int i = _argCount - 1; i >= 0; i--)
-            {
-                args[i] = frame.Pop();
-            }
+            int first = frame.StackIndex - _argumentCount;
+
+            var args = GetArgs(frame, first);
 
             try
             {
@@ -131,7 +145,8 @@ namespace System.Linq.Expressions.Interpreter
                     throw ExceptionHelpers.UpdateForRethrow(e.InnerException);
                 }
 
-                frame.Push(ret);
+                frame.Data[first] = ret;
+                frame.StackIndex = first + 1;
             }
             finally
             {
@@ -308,7 +323,7 @@ namespace System.Linq.Expressions.Interpreter
 
     internal abstract class NegateInstruction : Instruction
     {
-        private static Instruction s_int16,s_int32,s_int64,s_UInt16,s_UInt32,s_single,s_double;
+        private static Instruction s_int16, s_int32, s_int64, s_single, s_double;
 
         public override int ConsumedStack { get { return 1; } }
         public override int ProducedStack { get { return 1; } }
@@ -348,7 +363,7 @@ namespace System.Linq.Expressions.Interpreter
                 }
                 else
                 {
-                    frame.Push((Int16)unchecked(-(Int16)obj));
+                    frame.Push(unchecked((Int16)(-(Int16)obj)));
                 }
                 return +1;
             }
@@ -365,41 +380,7 @@ namespace System.Linq.Expressions.Interpreter
                 }
                 else
                 {
-                    frame.Push((Int64)unchecked(-(Int64)obj));
-                }
-                return +1;
-            }
-        }
-
-        internal sealed class NegateUInt16 : NegateInstruction
-        {
-            public override int Run(InterpretedFrame frame)
-            {
-                object obj = frame.Pop();
-                if (obj == null)
-                {
-                    frame.Push(null);
-                }
-                else
-                {
-                    frame.Push((Int16)unchecked(-(UInt16)obj));
-                }
-                return +1;
-            }
-        }
-
-        internal sealed class NegateUInt32 : NegateInstruction
-        {
-            public override int Run(InterpretedFrame frame)
-            {
-                object obj = frame.Pop();
-                if (obj == null)
-                {
-                    frame.Push(null);
-                }
-                else
-                {
-                    frame.Push((Int32)unchecked(-(UInt32)obj));
+                    frame.Push(unchecked((Int64)(-(Int64)obj)));
                 }
                 return +1;
             }
@@ -416,7 +397,7 @@ namespace System.Linq.Expressions.Interpreter
                 }
                 else
                 {
-                    frame.Push((Single)unchecked(-(Single)obj));
+                    frame.Push(unchecked((Single)(-(Single)obj)));
                 }
                 return +1;
             }
@@ -433,7 +414,7 @@ namespace System.Linq.Expressions.Interpreter
                 }
                 else
                 {
-                    frame.Push((Double)unchecked(-(Double)obj));
+                    frame.Push(unchecked((Double)(-(Double)obj)));
                 }
                 return +1;
             }
@@ -447,8 +428,6 @@ namespace System.Linq.Expressions.Interpreter
                 case TypeCode.Int16: return s_int16 ?? (s_int16 = new NegateInt16());
                 case TypeCode.Int32: return s_int32 ?? (s_int32 = new NegateInt32());
                 case TypeCode.Int64: return s_int64 ?? (s_int64 = new NegateInt64());
-                case TypeCode.UInt16: return s_UInt16 ?? (s_UInt16 = new NegateUInt16());
-                case TypeCode.UInt32: return s_UInt32 ?? (s_UInt32 = new NegateUInt32());
                 case TypeCode.Single: return s_single ?? (s_single = new NegateSingle());
                 case TypeCode.Double: return s_double ?? (s_double = new NegateDouble());
 
@@ -456,16 +435,11 @@ namespace System.Linq.Expressions.Interpreter
                     throw Error.ExpressionNotSupportedForType("Negate", type);
             }
         }
-
-        public override string ToString()
-        {
-            return "Negate()";
-        }
     }
 
     internal abstract class NegateCheckedInstruction : Instruction
     {
-        private static Instruction s_int16,s_int32,s_int64,s_UInt16,s_UInt32,s_single,s_double;
+        private static Instruction s_int16, s_int32, s_int64, s_single, s_double;
 
         public override int ConsumedStack { get { return 1; } }
         public override int ProducedStack { get { return 1; } }
@@ -505,7 +479,7 @@ namespace System.Linq.Expressions.Interpreter
                 }
                 else
                 {
-                    frame.Push((Int16)checked(-(Int16)obj));
+                    frame.Push(checked((Int16)(-(Int16)obj)));
                 }
                 return +1;
             }
@@ -522,46 +496,11 @@ namespace System.Linq.Expressions.Interpreter
                 }
                 else
                 {
-                    frame.Push((Int64)checked(-(Int64)obj));
+                    frame.Push(checked((Int64)(-(Int64)obj)));
                 }
                 return +1;
             }
         }
-
-        internal sealed class NegateCheckedUInt16 : NegateCheckedInstruction
-        {
-            public override int Run(InterpretedFrame frame)
-            {
-                object obj = frame.Pop();
-                if (obj == null)
-                {
-                    frame.Push(null);
-                }
-                else
-                {
-                    frame.Push((Int16)checked(-(UInt16)obj));
-                }
-                return +1;
-            }
-        }
-
-        internal sealed class NegateCheckedUInt32 : NegateCheckedInstruction
-        {
-            public override int Run(InterpretedFrame frame)
-            {
-                object obj = frame.Pop();
-                if (obj == null)
-                {
-                    frame.Push(null);
-                }
-                else
-                {
-                    frame.Push((Int32)checked(-(UInt32)obj));
-                }
-                return +1;
-            }
-        }
-
         internal sealed class NegateCheckedSingle : NegateCheckedInstruction
         {
             public override int Run(InterpretedFrame frame)
@@ -573,7 +512,7 @@ namespace System.Linq.Expressions.Interpreter
                 }
                 else
                 {
-                    frame.Push((Single)checked(-(Single)obj));
+                    frame.Push(checked((Single)(-(Single)obj)));
                 }
                 return +1;
             }
@@ -590,7 +529,7 @@ namespace System.Linq.Expressions.Interpreter
                 }
                 else
                 {
-                    frame.Push((Double)checked(-(Double)obj));
+                    frame.Push(checked((Double)(-(Double)obj)));
                 }
                 return +1;
             }
@@ -604,25 +543,187 @@ namespace System.Linq.Expressions.Interpreter
                 case TypeCode.Int16: return s_int16 ?? (s_int16 = new NegateCheckedInt16());
                 case TypeCode.Int32: return s_int32 ?? (s_int32 = new NegateCheckedInt32());
                 case TypeCode.Int64: return s_int64 ?? (s_int64 = new NegateCheckedInt64());
-                case TypeCode.UInt16: return s_UInt16 ?? (s_UInt16 = new NegateCheckedUInt16());
-                case TypeCode.UInt32: return s_UInt32 ?? (s_UInt32 = new NegateCheckedUInt32());
                 case TypeCode.Single: return s_single ?? (s_single = new NegateCheckedSingle());
                 case TypeCode.Double: return s_double ?? (s_double = new NegateCheckedDouble());
                 default:
                     throw Error.ExpressionNotSupportedForType("NegateChecked", type);
             }
         }
+    }
 
-        public override string ToString()
+    internal abstract class OnesComplementInstruction : Instruction
+    {
+        private static Instruction s_byte, s_sbyte, s_int16, s_int32, s_int64, s_UInt16, s_UInt32, s_UInt64;
+
+        public override int ConsumedStack { get { return 1; } }
+        public override int ProducedStack { get { return 1; } }
+        public override string InstructionName
         {
-            return "NegateChecked()";
+            get { return "OnesComplement"; }
+        }
+        private OnesComplementInstruction()
+        {
+        }
+
+        internal sealed class OnesComplementInt32 : OnesComplementInstruction
+        {
+            public override int Run(InterpretedFrame frame)
+            {
+                object obj = frame.Pop();
+                if (obj == null)
+                {
+                    frame.Push(null);
+                }
+                else
+                {
+                    frame.Push(ScriptingRuntimeHelpers.Int32ToObject(~(Int32)obj));
+                }
+                return +1;
+            }
+        }
+
+        internal sealed class OnesComplementInt16 : OnesComplementInstruction
+        {
+            public override int Run(InterpretedFrame frame)
+            {
+                object obj = frame.Pop();
+                if (obj == null)
+                {
+                    frame.Push(null);
+                }
+                else
+                {
+                    frame.Push((Int16)(~(Int16)obj));
+                }
+                return +1;
+            }
+        }
+
+        internal sealed class OnesComplementInt64 : OnesComplementInstruction
+        {
+            public override int Run(InterpretedFrame frame)
+            {
+                object obj = frame.Pop();
+                if (obj == null)
+                {
+                    frame.Push(null);
+                }
+                else
+                {
+                    frame.Push((Int64)(~(Int64)obj));
+                }
+                return +1;
+            }
+        }
+
+        internal sealed class OnesComplementUInt16 : OnesComplementInstruction
+        {
+            public override int Run(InterpretedFrame frame)
+            {
+                object obj = frame.Pop();
+                if (obj == null)
+                {
+                    frame.Push(null);
+                }
+                else
+                {
+                    frame.Push((UInt16)(~(UInt16)obj));
+                }
+                return +1;
+            }
+        }
+
+        internal sealed class OnesComplementUInt32 : OnesComplementInstruction
+        {
+            public override int Run(InterpretedFrame frame)
+            {
+                object obj = frame.Pop();
+                if (obj == null)
+                {
+                    frame.Push(null);
+                }
+                else
+                {
+                    frame.Push((UInt32)(~(UInt32)obj));
+                }
+                return +1;
+            }
+        }
+
+        internal sealed class OnesComplementUInt64 : OnesComplementInstruction
+        {
+            public override int Run(InterpretedFrame frame)
+            {
+                object obj = frame.Pop();
+                if (obj == null)
+                {
+                    frame.Push(null);
+                }
+                else
+                {
+                    frame.Push((UInt64)(~(UInt64)obj));
+                }
+                return +1;
+            }
+        }
+
+        internal sealed class OnesComplementByte : OnesComplementInstruction
+        {
+            public override int Run(InterpretedFrame frame)
+            {
+                object obj = frame.Pop();
+                if (obj == null)
+                {
+                    frame.Push(null);
+                }
+                else
+                {
+                    frame.Push((Byte)(~(Byte)obj));
+                }
+                return +1;
+            }
+        }
+
+        internal sealed class OnesComplementSByte : OnesComplementInstruction
+        {
+            public override int Run(InterpretedFrame frame)
+            {
+                object obj = frame.Pop();
+                if (obj == null)
+                {
+                    frame.Push(null);
+                }
+                else
+                {
+                    frame.Push((SByte)(~(SByte)obj));
+                }
+                return +1;
+            }
+        }
+
+        public static Instruction Create(Type type)
+        {
+            Debug.Assert(!type.GetTypeInfo().IsEnum);
+            switch (System.Dynamic.Utils.TypeExtensions.GetTypeCode(TypeUtils.GetNonNullableType(type)))
+            {
+                case TypeCode.Byte: return s_byte ?? (s_byte = new OnesComplementByte());
+                case TypeCode.SByte: return s_sbyte ?? (s_sbyte = new OnesComplementSByte());
+                case TypeCode.Int16: return s_int16 ?? (s_int16 = new OnesComplementInt16());
+                case TypeCode.Int32: return s_int32 ?? (s_int32 = new OnesComplementInt32());
+                case TypeCode.Int64: return s_int64 ?? (s_int64 = new OnesComplementInt64());
+                case TypeCode.UInt16: return s_UInt16 ?? (s_UInt16 = new OnesComplementUInt16());
+                case TypeCode.UInt32: return s_UInt32 ?? (s_UInt32 = new OnesComplementUInt32());
+                case TypeCode.UInt64: return s_UInt64 ?? (s_UInt64 = new OnesComplementUInt64());
+
+                default:
+                    throw Error.ExpressionNotSupportedForType("OnesComplement", type);
+            }
         }
     }
 
-
     internal abstract class IncrementInstruction : Instruction
     {
-        private static Instruction s_int16,s_int32,s_int64,s_UInt16,s_UInt32,s_single,s_double;
+        private static Instruction s_int16, s_int32, s_int64, s_UInt16, s_UInt32, s_UInt64, s_single, s_double;
 
         public override int ConsumedStack { get { return 1; } }
         public override int ProducedStack { get { return 1; } }
@@ -662,7 +763,7 @@ namespace System.Linq.Expressions.Interpreter
                 }
                 else
                 {
-                    frame.Push((Int16)unchecked(1 + (Int16)obj));
+                    frame.Push(unchecked((Int16)(1 + (Int16)obj)));
                 }
                 return +1;
             }
@@ -679,7 +780,7 @@ namespace System.Linq.Expressions.Interpreter
                 }
                 else
                 {
-                    frame.Push((Int64)unchecked(1 + (Int64)obj));
+                    frame.Push(unchecked((Int64)(1 + (Int64)obj)));
                 }
                 return +1;
             }
@@ -696,7 +797,7 @@ namespace System.Linq.Expressions.Interpreter
                 }
                 else
                 {
-                    frame.Push((Int16)unchecked(1 + (UInt16)obj));
+                    frame.Push(unchecked((UInt16)(1 + (UInt16)obj)));
                 }
                 return +1;
             }
@@ -713,7 +814,24 @@ namespace System.Linq.Expressions.Interpreter
                 }
                 else
                 {
-                    frame.Push((Int32)unchecked(1 + (UInt32)obj));
+                    frame.Push(unchecked((UInt32)(1 + (UInt32)obj)));
+                }
+                return +1;
+            }
+        }
+
+        internal sealed class IncrementUInt64 : IncrementInstruction
+        {
+            public override int Run(InterpretedFrame frame)
+            {
+                object obj = frame.Pop();
+                if (obj == null)
+                {
+                    frame.Push(null);
+                }
+                else
+                {
+                    frame.Push(unchecked((UInt64)(1 + (UInt64)obj)));
                 }
                 return +1;
             }
@@ -730,7 +848,7 @@ namespace System.Linq.Expressions.Interpreter
                 }
                 else
                 {
-                    frame.Push((Single)unchecked(1 + (Single)obj));
+                    frame.Push(unchecked((Single)(1 + (Single)obj)));
                 }
                 return +1;
             }
@@ -747,7 +865,7 @@ namespace System.Linq.Expressions.Interpreter
                 }
                 else
                 {
-                    frame.Push((Double)unchecked(1 + (Double)obj));
+                    frame.Push(unchecked((Double)(1 + (Double)obj)));
                 }
                 return +1;
             }
@@ -756,13 +874,14 @@ namespace System.Linq.Expressions.Interpreter
         public static Instruction Create(Type type)
         {
             Debug.Assert(!type.GetTypeInfo().IsEnum);
-            switch (System.Dynamic.Utils.TypeExtensions.GetTypeCode(type))
+            switch (System.Dynamic.Utils.TypeExtensions.GetTypeCode(TypeUtils.GetNonNullableType(type)))
             {
                 case TypeCode.Int16: return s_int16 ?? (s_int16 = new IncrementInt16());
                 case TypeCode.Int32: return s_int32 ?? (s_int32 = new IncrementInt32());
                 case TypeCode.Int64: return s_int64 ?? (s_int64 = new IncrementInt64());
                 case TypeCode.UInt16: return s_UInt16 ?? (s_UInt16 = new IncrementUInt16());
                 case TypeCode.UInt32: return s_UInt32 ?? (s_UInt32 = new IncrementUInt32());
+                case TypeCode.UInt64: return s_UInt64 ?? (s_UInt64 = new IncrementUInt64());
                 case TypeCode.Single: return s_single ?? (s_single = new IncrementSingle());
                 case TypeCode.Double: return s_double ?? (s_double = new IncrementDouble());
 
@@ -770,16 +889,11 @@ namespace System.Linq.Expressions.Interpreter
                     throw Error.ExpressionNotSupportedForType("Increment", type);
             }
         }
-
-        public override string ToString()
-        {
-            return "Increment()";
-        }
     }
 
     internal abstract class DecrementInstruction : Instruction
     {
-        private static Instruction s_int16,s_int32,s_int64,s_UInt16,s_UInt32,s_single,s_double;
+        private static Instruction s_int16, s_int32, s_int64, s_UInt16, s_UInt32, s_UInt64, s_single, s_double;
 
         public override int ConsumedStack { get { return 1; } }
         public override int ProducedStack { get { return 1; } }
@@ -819,7 +933,7 @@ namespace System.Linq.Expressions.Interpreter
                 }
                 else
                 {
-                    frame.Push((Int16)unchecked((Int16)obj - 1));
+                    frame.Push(unchecked((Int16)((Int16)obj - 1)));
                 }
                 return +1;
             }
@@ -836,7 +950,7 @@ namespace System.Linq.Expressions.Interpreter
                 }
                 else
                 {
-                    frame.Push((Int64)unchecked((Int64)obj - 1));
+                    frame.Push(unchecked((Int64)((Int64)obj - 1)));
                 }
                 return +1;
             }
@@ -853,7 +967,7 @@ namespace System.Linq.Expressions.Interpreter
                 }
                 else
                 {
-                    frame.Push((Int16)unchecked((UInt16)obj - 1));
+                    frame.Push(unchecked((UInt16)((UInt16)obj - 1)));
                 }
                 return +1;
             }
@@ -870,7 +984,24 @@ namespace System.Linq.Expressions.Interpreter
                 }
                 else
                 {
-                    frame.Push(unchecked((UInt32)obj - 1));
+                    frame.Push(unchecked((UInt32)((UInt32)obj - 1)));
+                }
+                return +1;
+            }
+        }
+
+        internal sealed class DecrementUInt64 : DecrementInstruction
+        {
+            public override int Run(InterpretedFrame frame)
+            {
+                object obj = frame.Pop();
+                if (obj == null)
+                {
+                    frame.Push(null);
+                }
+                else
+                {
+                    frame.Push(unchecked((UInt64)((UInt64)obj - 1)));
                 }
                 return +1;
             }
@@ -887,7 +1018,7 @@ namespace System.Linq.Expressions.Interpreter
                 }
                 else
                 {
-                    frame.Push(unchecked((Single)obj - 1));
+                    frame.Push(unchecked((Single)((Single)obj - 1)));
                 }
                 return +1;
             }
@@ -904,7 +1035,7 @@ namespace System.Linq.Expressions.Interpreter
                 }
                 else
                 {
-                    frame.Push((Double)unchecked((Double)obj - 1));
+                    frame.Push(unchecked((Double)((Double)obj - 1)));
                 }
                 return +1;
             }
@@ -913,13 +1044,14 @@ namespace System.Linq.Expressions.Interpreter
         public static Instruction Create(Type type)
         {
             Debug.Assert(!type.GetTypeInfo().IsEnum);
-            switch (System.Dynamic.Utils.TypeExtensions.GetTypeCode(type))
+            switch (System.Dynamic.Utils.TypeExtensions.GetTypeCode(TypeUtils.GetNonNullableType(type)))
             {
                 case TypeCode.Int16: return s_int16 ?? (s_int16 = new DecrementInt16());
                 case TypeCode.Int32: return s_int32 ?? (s_int32 = new DecrementInt32());
                 case TypeCode.Int64: return s_int64 ?? (s_int64 = new DecrementInt64());
                 case TypeCode.UInt16: return s_UInt16 ?? (s_UInt16 = new DecrementUInt16());
                 case TypeCode.UInt32: return s_UInt32 ?? (s_UInt32 = new DecrementUInt32());
+                case TypeCode.UInt64: return s_UInt64 ?? (s_UInt64 = new DecrementUInt64());
                 case TypeCode.Single: return s_single ?? (s_single = new DecrementSingle());
                 case TypeCode.Double: return s_double ?? (s_double = new DecrementDouble());
 
@@ -927,18 +1059,12 @@ namespace System.Linq.Expressions.Interpreter
                     throw Error.ExpressionNotSupportedForType("Decrement", type);
             }
         }
-
-        public override string ToString()
-        {
-            return "Decrement()";
-        }
     }
 
 
     internal abstract class LeftShiftInstruction : Instruction
     {
-        // Perf: LeftShiftityComparer<T> but is 3/2 to 2 times slower.
-        private static Instruction s_SByte,s_int16,s_int32,s_int64,s_byte,s_UInt16,s_UInt32,s_UInt64;
+        private static Instruction s_SByte, s_int16, s_int32, s_int64, s_byte, s_UInt16, s_UInt32, s_UInt64;
 
         public override int ConsumedStack { get { return 2; } }
         public override int ProducedStack { get { return 1; } }
@@ -1114,17 +1240,11 @@ namespace System.Linq.Expressions.Interpreter
                     throw Error.ExpressionNotSupportedForType("LeftShift", type);
             }
         }
-
-        public override string ToString()
-        {
-            return "LeftShift()";
-        }
     }
 
     internal abstract class RightShiftInstruction : Instruction
     {
-        // Perf: RightShiftityComparer<T> but is 3/2 to 2 times slower.
-        private static Instruction s_SByte,s_int16,s_int32,s_int64,s_byte,s_UInt16,s_UInt32,s_UInt64;
+        private static Instruction s_SByte, s_int16, s_int32, s_int64, s_byte, s_UInt16, s_UInt32, s_UInt64;
 
         public override int ConsumedStack { get { return 2; } }
         public override int ProducedStack { get { return 1; } }
@@ -1300,17 +1420,11 @@ namespace System.Linq.Expressions.Interpreter
                     throw Error.ExpressionNotSupportedForType("RightShift", type);
             }
         }
-
-        public override string ToString()
-        {
-            return "RightShift()";
-        }
     }
 
     internal abstract class ExclusiveOrInstruction : Instruction
     {
-        // Perf: ExclusiveOrityComparer<T> but is 3/2 to 2 times slower.
-        private static Instruction s_SByte,s_int16,s_int32,s_int64,s_byte,s_UInt16,s_UInt32,s_UInt64,s_bool;
+        private static Instruction s_SByte, s_int16, s_int32, s_int64, s_byte, s_UInt16, s_UInt32, s_UInt64, s_bool;
 
         public override int ConsumedStack { get { return 2; } }
         public override int ProducedStack { get { return 1; } }
@@ -1492,17 +1606,11 @@ namespace System.Linq.Expressions.Interpreter
         {
             return System.Dynamic.Utils.TypeExtensions.GetTypeCode(type.GetTypeInfo().IsEnum ? Enum.GetUnderlyingType(type) : TypeUtils.GetNonNullableType(type));
         }
-
-        public override string ToString()
-        {
-            return "ExclusiveOr()";
-        }
     }
 
     internal abstract class OrInstruction : Instruction
     {
-        // Perf: OrityComparer<T> but is 3/2 to 2 times slower.
-        private static Instruction s_SByte,s_int16,s_int32,s_int64,s_byte,s_UInt16,s_UInt32,s_UInt64,s_bool;
+        private static Instruction s_SByte, s_int16, s_int32, s_int64, s_byte, s_UInt16, s_UInt32, s_UInt64, s_bool;
 
         public override int ConsumedStack { get { return 2; } }
         public override int ProducedStack { get { return 1; } }
@@ -1691,17 +1799,11 @@ namespace System.Linq.Expressions.Interpreter
                     throw Error.ExpressionNotSupportedForType("Or", type);
             }
         }
-
-        public override string ToString()
-        {
-            return "Or()";
-        }
     }
 
     internal abstract class AndInstruction : Instruction
     {
-        // Perf: AndityComparer<T> but is 3/2 to 2 times slower.
-        private static Instruction s_SByte,s_int16,s_int32,s_int64,s_byte,s_UInt16,s_UInt32,s_UInt64,s_bool;
+        private static Instruction s_SByte, s_int16, s_int32, s_int64, s_byte, s_UInt16, s_UInt32, s_UInt64, s_bool;
 
         public override int ConsumedStack { get { return 2; } }
         public override int ProducedStack { get { return 1; } }
@@ -1890,11 +1992,6 @@ namespace System.Linq.Expressions.Interpreter
                     throw Error.ExpressionNotSupportedForType("And", type);
             }
         }
-
-        public override string ToString()
-        {
-            return "And()";
-        }
     }
 
     internal abstract class NullableMethodCallInstruction : Instruction
@@ -2052,7 +2149,7 @@ namespace System.Linq.Expressions.Interpreter
                 case "ToString": return s_toString ?? (s_toString = new ToStringClass());
                 default:
                     // System.Nullable doesn't have other instance methods 
-                    throw Assert.Unreachable;
+                    throw ContractUtils.Unreachable;
             }
         }
 
@@ -2064,7 +2161,7 @@ namespace System.Linq.Expressions.Interpreter
 
     internal abstract class CastInstruction : Instruction
     {
-        private static CastInstruction s_boolean,s_byte,s_char,s_dateTime,s_decimal,s_double,s_int16,s_int32,s_int64,            s_SByte,s_single,s_string,s_UInt16,s_UInt32,s_UInt64;
+        private static CastInstruction s_boolean, s_byte, s_char, s_dateTime, s_decimal, s_double, s_int16, s_int32, s_int64, s_SByte, s_single, s_string, s_UInt16, s_UInt32, s_UInt64;
 
         public override int ConsumedStack { get { return 1; } }
         public override int ProducedStack { get { return 1; } }
@@ -2078,24 +2175,29 @@ namespace System.Linq.Expressions.Interpreter
             public override int Run(InterpretedFrame frame)
             {
                 var value = frame.Pop();
-                if (value != null)
-                {
-                    frame.Push((T)value);
-                }
-                else
-                {
-                    frame.Push(null);
-                }
+                frame.Push((T)value);
                 return +1;
             }
         }
 
-        private class CastInstructionNoT : CastInstruction
+        private abstract class CastInstructionNoT : CastInstruction
         {
             private readonly Type _t;
-            public CastInstructionNoT(Type t)
+            protected CastInstructionNoT(Type t)
             {
                 _t = t;
+            }
+
+            public new static CastInstruction Create(Type t)
+            {
+                if (t.GetTypeInfo().IsValueType && !TypeUtils.IsNullableType(t))
+                {
+                    return new Value(t);
+                }
+                else
+                {
+                    return new Ref(t);
+                }
             }
 
             public override int Run(InterpretedFrame frame)
@@ -2103,18 +2205,54 @@ namespace System.Linq.Expressions.Interpreter
                 var value = frame.Pop();
                 if (value != null)
                 {
-                    if (!TypeUtils.HasReferenceConversion(value.GetType(), _t) &&
-                        !TypeUtils.HasIdentityPrimitiveOrNullableConversion(value.GetType(), _t))
+                    var valueType = value.GetType();
+
+                    if (!TypeUtils.HasReferenceConversion(valueType, _t) &&
+                        !TypeUtils.HasIdentityPrimitiveOrNullableConversion(valueType, _t))
                     {
                         throw new InvalidCastException();
                     }
+
+                    if (!_t.IsAssignableFrom(valueType))
+                    {
+                        throw new InvalidCastException();
+                    }
+
                     frame.Push(value);
                 }
                 else
                 {
-                    frame.Push(null);
+                    ConvertNull(frame);
                 }
                 return +1;
+            }
+
+            protected abstract void ConvertNull(InterpretedFrame frame);
+
+            class Ref : CastInstructionNoT
+            {
+                public Ref(Type t)
+                    : base(t)
+                {
+                }
+
+                protected override void ConvertNull(InterpretedFrame frame)
+                {
+                    frame.Push(null);
+                }
+            }
+
+            class Value : CastInstructionNoT
+            {
+                public Value(Type t)
+                    : base(t)
+                {
+                }
+
+                protected override void ConvertNull(InterpretedFrame frame)
+                {
+                    throw new NullReferenceException();
+                }
             }
         }
 
@@ -2142,13 +2280,14 @@ namespace System.Linq.Expressions.Interpreter
                 }
             }
 
-            return new CastInstructionNoT(t);
+            return CastInstructionNoT.Create(t);
         }
     }
 
     internal class CastToEnumInstruction : CastInstruction
     {
         private readonly Type _t;
+
         public CastToEnumInstruction(Type t)
         {
             Debug.Assert(t.GetTypeInfo().IsEnum);
@@ -2158,69 +2297,108 @@ namespace System.Linq.Expressions.Interpreter
         public override int Run(InterpretedFrame frame)
         {
             var from = frame.Pop();
-            var to = from != null ? Enum.ToObject(_t, from) : from;
-            frame.Push(to);
+            switch (Convert.GetTypeCode(from))
+            {
+                case TypeCode.Empty:
+                    frame.Push(null);
+                    break;
+                case TypeCode.Int32:
+                case TypeCode.SByte:
+                case TypeCode.Int16:
+                case TypeCode.Int64:
+                case TypeCode.UInt32:
+                case TypeCode.Byte:
+                case TypeCode.UInt16:
+                case TypeCode.UInt64:
+                case TypeCode.Char:
+                case TypeCode.Boolean:
+                    frame.Push(Enum.ToObject(_t, from));
+                    break;
+                default:
+                    throw new InvalidCastException();
+            }
 
             return +1;
         }
     }
 
-    internal class NullCheckInstruction : Instruction
+    internal sealed class CastReferenceToEnumInstruction : CastInstruction
     {
-        private readonly int _stackOffset;
-        private const int CacheSize = 12;
-        private static readonly NullCheckInstruction[] s_cache = new NullCheckInstruction[CacheSize];
+        private readonly Type _t;
 
-        public override int ConsumedStack { get { return 0; } }
-        public override int ProducedStack { get { return 0; } }
-        public override string InstructionName
+        public CastReferenceToEnumInstruction(Type t)
         {
-            get { return "NullCheck"; }
-        }
-        private NullCheckInstruction(int stackOffset)
-        {
-            _stackOffset = stackOffset;
-        }
-
-        public static Instruction Create(int stackOffset)
-        {
-            if (stackOffset < CacheSize)
-            {
-                return s_cache[stackOffset] ?? (s_cache[stackOffset] = new NullCheckInstruction(stackOffset));
-            }
-
-            return new NullCheckInstruction(stackOffset);
+            Debug.Assert(t.GetTypeInfo().IsEnum);
+            _t = t;
         }
 
         public override int Run(InterpretedFrame frame)
         {
-            if (frame.Data[frame.StackIndex - 1 - _stackOffset] == null)
+            var from = frame.Pop();
+            if (from == null)
             {
-                throw new NullReferenceException();
+                frame.Push(null);
             }
-            return +1;
-        }
-    }
+            else
+            {
+                Type underlying = _t.GetTypeInfo().IsEnum ? Enum.GetUnderlyingType(_t) : _t;
+                // Order checks in order of likelihood. int first as the vast majority of enums
+                // are int-based, then long as that is sometimes used when required for a large set of flags
+                // and so-on.
+                if (underlying == typeof(int))
+                {
+                    // If from is neither an int nor a type assignable to int (viz. an int-backed enum)
+                    // this will cause an InvalidCastException, which is what this operation should
+                    // throw in this case.
+                    frame.Push(Enum.ToObject(_t, (int)from));
+                }
+                else if (underlying == typeof(long))
+                {
+                    frame.Push(Enum.ToObject(_t, (long)from));
+                }
+                else if (underlying == typeof(uint))
+                {
+                    frame.Push(Enum.ToObject(_t, (uint)from));
+                }
+                else if (underlying == typeof(ulong))
+                {
+                    frame.Push(Enum.ToObject(_t, (ulong)from));
+                }
+                else if (underlying == typeof(byte))
+                {
+                    frame.Push(Enum.ToObject(_t, (byte)from));
+                }
+                else if (underlying == typeof(sbyte))
+                {
+                    frame.Push(Enum.ToObject(_t, (sbyte)from));
+                }
+                else if (underlying == typeof(short))
+                {
+                    frame.Push(Enum.ToObject(_t, (short)from));
+                }
+                else if (underlying == typeof(ushort))
+                {
+                    frame.Push(Enum.ToObject(_t, (ushort)from));
+                }
+                else if (underlying == typeof(char))
+                {
+                    // Disallowed in C#, but allowed in CIL
+                    frame.Push(Enum.ToObject(_t, (char)from));
+                }
+                else if (underlying == typeof(bool))
+                {
+                    // Disallowed in C#, but allowed in CIL
+                    frame.Push(Enum.ToObject(_t, (bool)from));
+                }
+                else
+                {
+                    throw new InvalidCastException();
+                }
+            }
 
-#if DEBUG
-    internal class LogInstruction : Instruction
-    {
-        private readonly string _message;
-        public LogInstruction(string message)
-        {
-            _message = message;
-        }
-        public override string InstructionName
-        {
-            get { return "Log"; }
-        }
-        public override int Run(InterpretedFrame frame)
-        {
-            //Console.WriteLine(_message);
-            return +1;
+            return 1;
         }
     }
-#endif
 
     internal class QuoteInstruction : Instruction
     {
@@ -2256,7 +2434,7 @@ namespace System.Linq.Expressions.Interpreter
         // burned as a constant, and all hoisted variables/parameters are rewritten
         // as indexing expressions.
         //
-        // The behavior of Quote is indended to be like C# and VB expression quoting
+        // The behavior of Quote is intended to be like C# and VB expression quoting
         private sealed class ExpressionQuoter : ExpressionVisitor
         {
             private readonly Dictionary<ParameterExpression, LocalVariable> _variables;
@@ -2265,7 +2443,7 @@ namespace System.Linq.Expressions.Interpreter
             // A stack of variables that are defined in nested scopes. We search
             // this first when resolving a variable in case a nested scope shadows
             // one of our variable instances.
-            private readonly Stack<Set<ParameterExpression>> _shadowedVars = new Stack<Set<ParameterExpression>>();
+            private readonly Stack<HashSet<ParameterExpression>> _shadowedVars = new Stack<HashSet<ParameterExpression>>();
 
             internal ExpressionQuoter(Dictionary<ParameterExpression, LocalVariable> hoistedVariables, InterpretedFrame frame)
             {
@@ -2275,7 +2453,7 @@ namespace System.Linq.Expressions.Interpreter
 
             protected override Expression VisitLambda<T>(Expression<T> node)
             {
-                _shadowedVars.Push(new Set<ParameterExpression>(node.Parameters));
+                _shadowedVars.Push(new HashSet<ParameterExpression>(node.Parameters));
                 Expression b = Visit(node.Body);
                 _shadowedVars.Pop();
                 if (b == node.Body)
@@ -2289,7 +2467,7 @@ namespace System.Linq.Expressions.Interpreter
             {
                 if (node.Variables.Count > 0)
                 {
-                    _shadowedVars.Push(new Set<ParameterExpression>(node.Variables));
+                    _shadowedVars.Push(new HashSet<ParameterExpression>(node.Variables));
                 }
                 var b = Visit(node.Expressions);
                 if (node.Variables.Count > 0)
@@ -2307,7 +2485,7 @@ namespace System.Linq.Expressions.Interpreter
             {
                 if (node.Variable != null)
                 {
-                    _shadowedVars.Push(new Set<ParameterExpression>(new[] { node.Variable }));
+                    _shadowedVars.Push(new HashSet<ParameterExpression>{ node.Variable });
                 }
                 Expression b = Visit(node.Body);
                 Expression f = Visit(node.Filter);
@@ -2425,7 +2603,7 @@ namespace System.Linq.Expressions.Interpreter
             }
 
             /// <summary>
-            /// Provides a list of variables, supporing read/write of the values
+            /// Provides a list of variables, supporting read/write of the values
             /// Exposed via RuntimeVariablesExpression
             /// </summary>
             private sealed class MergedRuntimeVariables : IRuntimeVariables

@@ -1,5 +1,6 @@
-// Copyright (c) Microsoft. All rights reserved.
-// Licensed under the MIT license. See LICENSE file in the project root for full license information.
+// Licensed to the .NET Foundation under one or more agreements.
+// The .NET Foundation licenses this file to you under the MIT license.
+// See the LICENSE file in the project root for more information.
 
 using System;
 using System.Diagnostics;
@@ -140,7 +141,6 @@ namespace Internal.Cryptography.Pal.Native
         {
             this.cbData = cbData;
             this.pbData = pbData;
-            return;
         }
 
         public int cbData;
@@ -148,6 +148,11 @@ namespace Internal.Cryptography.Pal.Native
 
         public byte[] ToByteArray()
         {
+            if (cbData == 0)
+            {
+                return Array.Empty<byte>();
+            }
+
             byte[] array = new byte[cbData];
             Marshal.Copy((IntPtr)pbData, array, 0, cbData);
             return array;
@@ -162,7 +167,11 @@ namespace Internal.Cryptography.Pal.Native
         CERT_ARCHIVED_PROP_ID        = 19,
         CERT_KEY_IDENTIFIER_PROP_ID  = 20,
         CERT_PUBKEY_ALG_PARA_PROP_ID = 22,
-        CERT_DELETE_KEYSET_PROP_ID   = 101,
+
+        // CERT_DELETE_KEYSET_PROP_ID is not defined by Windows. It's a custom property set by the framework
+        // as a backchannel message from the portion of X509Certificate2Collection.Import() that loads up the PFX
+        // to the X509Certificate2..ctor(IntPtr) call that creates the managed wrapper.
+        CERT_DELETE_KEYSET_PROP_ID = 101,
     }
 
     [Flags]
@@ -248,6 +257,11 @@ namespace Internal.Cryptography.Pal.Native
 
         public byte[] ToByteArray()
         {
+            if (cbData == 0)
+            {
+                return Array.Empty<byte>();
+            }
+
             byte[] array = new byte[cbData];
             Marshal.Copy((IntPtr)pbData, array, 0, cbData);
             return array;
@@ -645,6 +659,9 @@ namespace Internal.Cryptography.Pal.Native
 
         CERT_TRUST_IS_OFFLINE_REVOCATION               = 0x01000000,
         CERT_TRUST_NO_ISSUANCE_CHAIN_POLICY            = 0x02000000,
+        CERT_TRUST_IS_EXPLICIT_DISTRUST                = 0x04000000,
+        CERT_TRUST_HAS_NOT_SUPPORTED_CRITICAL_EXT      = 0x08000000,
+        CERT_TRUST_HAS_WEAK_SIGNATURE                  = 0x00100000,
 
         // These can be applied to chains only
         CERT_TRUST_IS_PARTIAL_CHAIN                    = 0x00010000,
@@ -768,6 +785,11 @@ namespace Internal.Cryptography.Pal.Native
         // Predefined verify chain policies
         CERT_CHAIN_POLICY_BASE = 1,
     }
+
+    internal enum CryptAcquireFlags : int
+    {
+        CRYPT_ACQUIRE_ONLY_NCRYPT_KEY_FLAG = 0x00040000,
+    }
 }
 
- 
+

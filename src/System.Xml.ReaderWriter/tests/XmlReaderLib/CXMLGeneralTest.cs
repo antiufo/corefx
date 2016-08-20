@@ -1,14 +1,11 @@
-﻿// Copyright (c) Microsoft. All rights reserved.
-// Licensed under the MIT license. See LICENSE file in the project root for full license information.
+// Licensed to the .NET Foundation under one or more agreements.
+// The .NET Foundation licenses this file to you under the MIT license.
+// See the LICENSE file in the project root for more information.
 
-using System;
-using System.IO;
-using System.Xml;
 using OLEDB.Test.ModuleCore;
-using System.Collections.Generic;
-using XmlCoreTest.Common;
+using System.IO;
 
-namespace XmlReaderTest.Common
+namespace System.Xml.Tests
 {
     ////////////////////////////////////////////////////////////////
     // TestCase TCXML BaseGeneral
@@ -260,7 +257,7 @@ namespace XmlReaderTest.Common
                             nBytes = DataReader.ReadElementContentAsBase64(buffer, 0, 1);
                             break;
                     }
-                    throw new CTestFailedException("ReadContentAsBinHex doesnt throw NotSupportedException");
+                    throw new CTestFailedException("ReadContentAsBinHex doesn't throw NotSupportedException");
                 }
                 catch (NotSupportedException)
                 {
@@ -923,7 +920,7 @@ namespace XmlReaderTest.Common
         public int LookupNamespace9()
         {
             string ns = "http://www.w3.org/1999/XMLSchema";
-            string filename = TestData + "Common/bug_57723.xml";
+            string filename = Path.Combine(TestData, "Common", "bug_57723.xml");
 
             ReloadSource(filename);
 
@@ -1868,7 +1865,7 @@ namespace XmlReaderTest.Common
         [Variation("Call Skip in while read loop", Pri = 0)]
         public int skip307543()
         {
-            string fileName = Path.Combine(TestData, @"Common\skip307543.xml");
+            string fileName = Path.Combine(TestData, "Common", "skip307543.xml");
             ReloadSource(fileName);
             while (DataReader.Read())
                 DataReader.Skip();
@@ -2397,7 +2394,7 @@ namespace XmlReaderTest.Common
             if (IsXsltReader() || IsXPathNavigatorReader())
                 return TEST_SKIPPED;
 
-            string filename = TestData + "Common/bug_62426.xml";
+            string filename = Path.Combine(TestData, "Common", "bug_62426.xml");
             if (IsBinaryReader())
                 filename = Path.GetFileName(filename) + ".bin";
 
@@ -2436,7 +2433,7 @@ namespace XmlReaderTest.Common
             if (IsXsltReader() || IsXPathNavigatorReader())
                 return TEST_SKIPPED;
 
-            string filename = TestData + "Common/file#%23.xml";
+            string filename = Path.Combine(TestData, "Common", "file#%23.xml");
             if (IsBinaryReader())
                 filename = Path.GetFileName(filename) + ".bin";
 
@@ -2461,12 +2458,12 @@ namespace XmlReaderTest.Common
             if (IsXsltReader() || IsXPathNavigatorReader())
                 return TEST_SKIPPED;
 
-            string filepath = TestData + "Common/";
-            string filename = filepath + "bug_60677.xml";
+            string filepath = Path.Combine(TestData, "Common");
+            string filename = Path.Combine(filepath, "bug_60677.xml");
             if (IsBinaryReader())
                 filename = Path.GetFileName(filename) + ".bin";
 
-            string fileent = filepath + "A/B/bug60677.ent";
+            string fileent = Path.Combine(filepath, "A", "B", "bug60677.ent");
 
             Uri uriFile = new Uri("file:" + filename);
             Uri uriEnt = new Uri("file:" + fileent);
@@ -2493,12 +2490,12 @@ namespace XmlReaderTest.Common
             if (!IsXmlValidatingReader())
                 return TEST_SKIPPED;
 
-            string filepath = TestData + "Common/";
-            string filename = filepath + "bug_60677.xml";
+            string filepath = Path.Combine(TestData, "Common");
+            string filename = Path.Combine(filepath, "bug_60677.xml");
             if (IsBinaryReader())
                 filename = Path.GetFileName(filename) + ".bin";
 
-            string fileent = filepath + "bug_60677.xml";
+            string fileent = Path.Combine(filepath, "bug_60677.xml");
 
             Uri uriFile = new Uri("file:" + filename);
             Uri uriEnt = new Uri("file:" + fileent);
@@ -2522,7 +2519,7 @@ namespace XmlReaderTest.Common
             if (IsXsltReader() || IsXmlNodeReader() || IsXmlNodeReaderDataDoc() || IsCoreReader() || IsXPathNavigatorReader())
                 return TEST_SKIPPED;
 
-            string filename = TestData + "Common/Bug94358.xml";
+            string filename = Path.Combine(TestData, "Common", "Bug94358.xml");
             if (IsBinaryReader())
                 filename = Path.GetFileName(filename) + ".bin";
 

@@ -1,5 +1,6 @@
-// Copyright (c) Microsoft. All rights reserved.
-// Licensed under the MIT license. See LICENSE file in the project root for full license information.
+// Licensed to the .NET Foundation under one or more agreements.
+// The .NET Foundation licenses this file to you under the MIT license.
+// See the LICENSE file in the project root for more information.
 
 using System;
 using System.Text;
@@ -32,7 +33,7 @@ namespace Internal.Cryptography.Pal.Native
             // Copy the oid strings to a local list to prevent a security race condition where
             // the OidCollection or individual oids can be modified by another thread and
             // potentially cause a buffer overflow
-            LowLevelListWithIList<byte[]> oidStrings = new LowLevelListWithIList<byte[]>();
+            List<byte[]> oidStrings = new List<byte[]>();
             foreach (Oid oid in oids)
             {
                 byte[] oidString = oid.ValueAsAscii();
@@ -82,33 +83,31 @@ namespace Internal.Cryptography.Pal.Native
                 int cb = 0;
 
                 if (!Interop.crypt32.CryptDecodeObjectPointer(CertEncodingType.All, lpszStructType, encoded, encoded.Length, CryptDecodeObjectFlags.None, null, ref cb))
-                    throw new CryptographicException(Marshal.GetLastWin32Error());
+                    throw Marshal.GetLastWin32Error().ToCryptographicException();
 
                 byte* decoded = stackalloc byte[cb];
                 if (!Interop.crypt32.CryptDecodeObjectPointer(CertEncodingType.All, lpszStructType, encoded, encoded.Length, CryptDecodeObjectFlags.None, (byte*)decoded, ref cb))
-                    throw new CryptographicException(Marshal.GetLastWin32Error());
+                    throw Marshal.GetLastWin32Error().ToCryptographicException();
 
                 receiver(decoded);
             }
-            return;
         }
 
-        public static void DecodeObject(this byte[] encoded, String lpszStructType, DecodedObjectReceiver receiver)
+        public static void DecodeObject(this byte[] encoded, string lpszStructType, DecodedObjectReceiver receiver)
         {
             unsafe
             {
                 int cb = 0;
 
                 if (!Interop.crypt32.CryptDecodeObjectPointer(CertEncodingType.All, lpszStructType, encoded, encoded.Length, CryptDecodeObjectFlags.None, null, ref cb))
-                    throw new CryptographicException(Marshal.GetLastWin32Error());
+                    throw Marshal.GetLastWin32Error().ToCryptographicException();
 
                 byte* decoded = stackalloc byte[cb];
                 if (!Interop.crypt32.CryptDecodeObjectPointer(CertEncodingType.All, lpszStructType, encoded, encoded.Length, CryptDecodeObjectFlags.None, (byte*)decoded, ref cb))
-                    throw new CryptographicException(Marshal.GetLastWin32Error());
+                    throw Marshal.GetLastWin32Error().ToCryptographicException();
 
                 receiver(decoded);
             }
-            return;
         }
 
         public static bool DecodeObjectNoThrow(this byte[] encoded, CryptDecodeObjectStructType lpszStructType, DecodedObjectReceiver receiver)

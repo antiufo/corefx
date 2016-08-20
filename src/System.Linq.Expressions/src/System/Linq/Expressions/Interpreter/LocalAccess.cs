@@ -1,5 +1,6 @@
-// Copyright (c) Microsoft. All rights reserved.
-// Licensed under the MIT license. See LICENSE file in the project root for full license information.
+// Licensed to the .NET Foundation under one or more agreements.
+// The .NET Foundation licenses this file to you under the MIT license.
+// See the LICENSE file in the project root for more information.
 
 using System;
 using System.Linq.Expressions;
@@ -43,6 +44,11 @@ namespace System.Linq.Expressions.Interpreter
 
         public override int ProducedStack { get { return 1; } }
 
+        public override string InstructionName
+        {
+            get { return "LoadLocal"; }
+        }
+
         public override int Run(InterpretedFrame frame)
         {
             frame.Data[frame.StackIndex++] = frame.Data[_index];
@@ -64,6 +70,11 @@ namespace System.Linq.Expressions.Interpreter
 
         public override int ProducedStack { get { return 1; } }
 
+        public override string InstructionName
+        {
+            get { return "LoadLocalBox"; }
+        }
+
         public override int Run(InterpretedFrame frame)
         {
             var box = (IStrongBox)frame.Data[_index];
@@ -81,6 +92,11 @@ namespace System.Linq.Expressions.Interpreter
 
         public override int ProducedStack { get { return 1; } }
 
+        public override string InstructionName
+        {
+            get { return "LoadLocalClosure"; }
+        }
+
         public override int Run(InterpretedFrame frame)
         {
             var box = frame.Closure[_index];
@@ -97,6 +113,11 @@ namespace System.Linq.Expressions.Interpreter
         }
 
         public override int ProducedStack { get { return 1; } }
+
+        public override string InstructionName
+        {
+            get { return "LoadLocal"; }
+        }
 
         public override int Run(InterpretedFrame frame)
         {
@@ -120,6 +141,11 @@ namespace System.Linq.Expressions.Interpreter
         public override int ConsumedStack { get { return 1; } }
         public override int ProducedStack { get { return 1; } }
 
+        public override string InstructionName
+        {
+            get { return "AssignLocal"; }
+        }
+
         public override int Run(InterpretedFrame frame)
         {
             frame.Data[_index] = frame.Peek();
@@ -140,6 +166,12 @@ namespace System.Linq.Expressions.Interpreter
         }
 
         public override int ConsumedStack { get { return 1; } }
+
+        public override string InstructionName
+        {
+            get { return "StoreLocal"; }
+        }
+
         public override int Run(InterpretedFrame frame)
         {
             frame.Data[_index] = frame.Pop();
@@ -162,6 +194,11 @@ namespace System.Linq.Expressions.Interpreter
         public override int ConsumedStack { get { return 1; } }
         public override int ProducedStack { get { return 1; } }
 
+        public override string InstructionName
+        {
+            get { return "AssignLocalBox"; }
+        }
+
         public override int Run(InterpretedFrame frame)
         {
             var box = (IStrongBox)frame.Data[_index];
@@ -179,6 +216,11 @@ namespace System.Linq.Expressions.Interpreter
 
         public override int ConsumedStack { get { return 1; } }
         public override int ProducedStack { get { return 0; } }
+
+        public override string InstructionName
+        {
+            get { return "StoreLocalBox"; }
+        }
 
         public override int Run(InterpretedFrame frame)
         {
@@ -198,6 +240,11 @@ namespace System.Linq.Expressions.Interpreter
         public override int ConsumedStack { get { return 1; } }
         public override int ProducedStack { get { return 1; } }
 
+        public override string InstructionName
+        {
+            get { return "AssignLocalClosure"; }
+        }
+
         public override int Run(InterpretedFrame frame)
         {
             var box = frame.Closure[_index];
@@ -216,6 +263,11 @@ namespace System.Linq.Expressions.Interpreter
 
         public override int ConsumedStack { get { return 1; } }
         public override int ProducedStack { get { return 1; } }
+
+        public override string InstructionName
+        {
+            get { return "ValueTypeCopy"; }
+        }
 
         public override int Run(InterpretedFrame frame)
         {
@@ -280,7 +332,7 @@ namespace System.Linq.Expressions.Interpreter
 
             public Instruction BoxIfIndexMatches(int index)
             {
-                return (index == _index) ? new ImmutableBox(index) : null;
+                return (index == _index) ? new ImmutableBox(index, _defaultValue) : null;
             }
 
             public override string InstructionName
@@ -293,47 +345,23 @@ namespace System.Linq.Expressions.Interpreter
         {
             // immutable value:
 
-            internal ImmutableBox(int index)
+            private readonly object _defaultValue;
+
+            internal ImmutableBox(int index, object defaultValue)
                 : base(index)
             {
+                _defaultValue = defaultValue;
             }
 
             public override int Run(InterpretedFrame frame)
             {
-                frame.Data[_index] = new StrongBox<object>();
+                frame.Data[_index] = new StrongBox<object>(_defaultValue);
                 return 1;
             }
 
             public override string InstructionName
             {
                 get { return "InitImmutableBox"; }
-            }
-        }
-
-        internal sealed class ImmutableRefValue : InitializeLocalInstruction, IBoxableInstruction
-        {
-            private readonly Type _type;
-
-            internal ImmutableRefValue(int index, Type type)
-                : base(index)
-            {
-                _type = type;
-            }
-
-            public override int Run(InterpretedFrame frame)
-            {
-                frame.Data[_index] = null;
-                return 1;
-            }
-
-            public Instruction BoxIfIndexMatches(int index)
-            {
-                return (index == _index) ? new ImmutableRefBox(index) : null;
-            }
-
-            public override string InstructionName
-            {
-                get { return "InitImmutableValue"; }
             }
         }
 
@@ -369,11 +397,16 @@ namespace System.Linq.Expressions.Interpreter
                 frame.Data[_index] = new StrongBox<object>(frame.Data[_index]);
                 return 1;
             }
+
+            public override string InstructionName
+            {
+                get { return "InitParameterBox"; }
+            }
         }
 
         internal sealed class Parameter : InitializeLocalInstruction, IBoxableInstruction
         {
-            internal Parameter(int index, Type parameterType)
+            internal Parameter(int index)
                 : base(index)
             {
             }
@@ -426,7 +459,7 @@ namespace System.Linq.Expressions.Interpreter
 
             public Instruction BoxIfIndexMatches(int index)
             {
-                return (index == _index) ? new MutableBox(index) : null;
+                return (index == _index) ? new MutableBox(index, _type) : null;
             }
 
             public override string InstructionName
@@ -437,14 +470,30 @@ namespace System.Linq.Expressions.Interpreter
 
         internal sealed class MutableBox : InitializeLocalInstruction
         {
-            internal MutableBox(int index)
+            private readonly Type _type;
+
+            internal MutableBox(int index, Type type)
                 : base(index)
             {
+                _type = type;
             }
 
             public override int Run(InterpretedFrame frame)
             {
-                frame.Data[_index] = new StrongBox<object>();
+                var value = default(object);
+
+                try
+                {
+                    value = Activator.CreateInstance(_type);
+                }
+                catch (TargetInvocationException e)
+                {
+                    ExceptionHelpers.UpdateForRethrow(e.InnerException);
+                    throw e.InnerException;
+                }
+
+                frame.Data[_index] = new StrongBox<object>(value);
+
                 return 1;
             }
 
@@ -480,6 +529,11 @@ namespace System.Linq.Expressions.Interpreter
             }
             frame.Push(RuntimeVariables.Create(ret));
             return +1;
+        }
+
+        public override string InstructionName
+        {
+            get { return "GetRuntimeVariables"; }
         }
 
         public override string ToString()

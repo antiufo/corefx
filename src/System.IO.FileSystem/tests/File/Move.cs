@@ -1,9 +1,10 @@
-﻿// Copyright (c) Microsoft. All rights reserved.
-// Licensed under the MIT license. See LICENSE file in the project root for full license information.
+// Licensed to the .NET Foundation under one or more agreements.
+// The .NET Foundation licenses this file to you under the MIT license.
+// See the LICENSE file in the project root for more information.
 
 using Xunit;
 
-namespace System.IO.FileSystem.Tests
+namespace System.IO.Tests
 {
     public class File_Move : FileSystemTest
     {
@@ -49,7 +50,10 @@ namespace System.IO.FileSystem.Tests
             testFile.Create().Dispose();
             Assert.All(IOInputs.GetPathsWithInvalidCharacters(), (invalid) =>
             {
-                Assert.Throws<ArgumentException>(() => Move(testFile.FullName, invalid));
+                if (invalid.Contains(@"\\?\"))
+                    Assert.Throws<IOException>(() => Move(testFile.FullName, invalid));
+                else
+                    Assert.Throws<ArgumentException>(() => Move(testFile.FullName, invalid));
             });
         }
 
@@ -144,13 +148,43 @@ namespace System.IO.FileSystem.Tests
         }
 
         [Fact]
+        [PlatformSpecific(PlatformID.Windows)]
+        public void MaxPath_Windows()
+        {
+            // Create a destination path longer than the traditional Windows limit of 256 characters,
+            // but under the long path limitation (32K).
+
+            string testFileSource = Path.Combine(TestDirectory, GetTestFileName());
+            File.Create(testFileSource).Dispose();
+            Assert.True(File.Exists(testFileSource), "test file should exist");
+
+            Assert.All(IOInputs.GetPathsLongerThanMaxPath(GetTestFilePath()), (path) =>
+            {
+                string baseDestinationPath = Path.GetDirectoryName(path);
+                if (!Directory.Exists(baseDestinationPath))
+                {
+                    Directory.CreateDirectory(baseDestinationPath);
+                }
+                Assert.True(Directory.Exists(baseDestinationPath), "base destination path should exist");
+
+                Move(testFileSource, path);
+                Assert.True(File.Exists(path), "moved test file should exist");
+                File.Delete(testFileSource);
+                Assert.False(File.Exists(testFileSource), "source test file should not exist");
+                Move(path, testFileSource);
+                Assert.True(File.Exists(testFileSource), "restored test file should exist");
+            });
+        }
+
+        [Fact]
+        [PlatformSpecific(PlatformID.AnyUnix)]
         public void LongPath()
         {
             //Create a destination path longer than the traditional Windows limit of 256 characters
             string testFileSource = Path.Combine(TestDirectory, GetTestFileName());
             File.Create(testFileSource).Dispose();
 
-            Assert.All(IOInputs.GetPathsLongerThanMaxPath(), (path) =>
+            Assert.All(IOInputs.GetPathsLongerThanMaxLongPath(GetTestFilePath()), (path) =>
             {
                 Assert.Throws<PathTooLongException>(() => Move(testFileSource, path));
                 File.Delete(testFileSource);
@@ -161,6 +195,18 @@ namespace System.IO.FileSystem.Tests
         #endregion
 
         #region PlatformSpecific
+
+        [Fact]
+        [PlatformSpecific(PlatformID.Windows)]
+        public void WindowsPathWithIllegalColons()
+        {
+            FileInfo testFile = new FileInfo(GetTestFilePath());
+            testFile.Create().Dispose();
+            Assert.All(IOInputs.GetPathsWithInvalidColons(), (invalid) =>
+            {
+                Assert.Throws<NotSupportedException>(() => Move(testFile.FullName, invalid));
+            });
+        }
 
         [Fact]
         [PlatformSpecific(PlatformID.Windows)]

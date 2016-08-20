@@ -1,5 +1,6 @@
-// Copyright (c) Microsoft. All rights reserved.
-// Licensed under the MIT license. See LICENSE file in the project root for full license information.
+// Licensed to the .NET Foundation under one or more agreements.
+// The .NET Foundation licenses this file to you under the MIT license.
+// See the LICENSE file in the project root for more information.
 
 using Microsoft.Win32.SafeHandles;
 using System.Collections.Generic;
@@ -15,6 +16,35 @@ namespace System.Diagnostics
 {
     public partial class Process : IDisposable
     {
+        /// <summary>
+        /// Creates an array of <see cref="Process"/> components that are associated with process resources on a
+        /// remote computer. These process resources share the specified process name.
+        /// </summary>
+        public static Process[] GetProcessesByName(string processName, string machineName)
+        {
+            if (processName == null)
+            {
+                processName = string.Empty;
+            }
+
+            Process[] procs = GetProcesses(machineName);
+            var list = new List<Process>();
+
+            for (int i = 0; i < procs.Length; i++)
+            {
+                if (string.Equals(processName, procs[i].ProcessName, StringComparison.OrdinalIgnoreCase))
+                {
+                    list.Add(procs[i]);
+                }
+                else
+                {
+                    procs[i].Dispose();
+                }
+            }
+
+            return list.ToArray();
+        }
+
         /// <summary>
         /// Puts a Process component in state to interact with operating system processes that run in a 
         /// special mode by enabling the native property SeDebugPrivilege on the current thread.
@@ -150,7 +180,7 @@ namespace System.Diagnostics
                     // the exit code out after calling ReadToEnd() or standard output or standard error. In order
                     // to allow 259 to function as a valid exit code and to break as few people as possible that
                     // took the ReadToEnd dependency, we check for an exit code before doing the more correct
-                    // check to see if we have been signalled.
+                    // check to see if we have been signaled.
                     if (Interop.mincore.GetExitCodeProcess(handle, out localExitCode) && localExitCode != Interop.mincore.HandleOptions.STILL_ACTIVE)
                     {
                         _exitCode = localExitCode;
@@ -505,7 +535,7 @@ namespace System.Diagnostics
                         startupInfo.dwFlags = Interop.mincore.StartupInfoOptions.STARTF_USESTDHANDLES;
                     }
 
-                    // set up the creation flags paramater
+                    // set up the creation flags parameter
                     int creationFlags = 0;
                     if (startInfo.CreateNoWindow) creationFlags |= Interop.mincore.StartupInfoOptions.CREATE_NO_WINDOW;
 
@@ -570,7 +600,7 @@ namespace System.Diagnostics
                             retVal = Interop.mincore.CreateProcess(
                                     null,                // we don't need this since all the info is in commandLine
                                     commandLine,         // pointer to the command line string
-                                    ref unused_SecAttrs, // address to process security attributes, we don't need to inheriat the handle
+                                    ref unused_SecAttrs, // address to process security attributes, we don't need to inherit the handle
                                     ref unused_SecAttrs, // address to thread security attributes.
                                     true,                // handle inheritance flag
                                     creationFlags,       // creation flags
@@ -636,6 +666,12 @@ namespace System.Diagnostics
             return ret;
         }
 
+        private static Encoding GetEncoding(int codePage)
+        {
+            Encoding enc = EncodingHelper.GetSupportedConsoleEncoding(codePage);
+            return new ConsoleEncoding(enc); // ensure encoding doesn't output a preamble
+        }
+
         // -----------------------------
         // ---- PAL layer ends here ----
         // -----------------------------
@@ -664,7 +700,7 @@ namespace System.Diagnostics
                 commandLine.Append("\"");
             }
 
-            if (!String.IsNullOrEmpty(arguments))
+            if (!string.IsNullOrEmpty(arguments))
             {
                 commandLine.Append(" ");
                 commandLine.Append(arguments);
@@ -829,7 +865,7 @@ namespace System.Diagnostics
         private void CreatePipe(out SafeFileHandle parentHandle, out SafeFileHandle childHandle, bool parentInputs)
         {
             Interop.mincore.SECURITY_ATTRIBUTES securityAttributesParent = new Interop.mincore.SECURITY_ATTRIBUTES();
-            securityAttributesParent.bInheritHandle = true;
+            securityAttributesParent.bInheritHandle = Interop.BOOL.TRUE;
 
             SafeFileHandle hTmp = null;
             try

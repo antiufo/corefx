@@ -1,15 +1,14 @@
-// Copyright (c) Microsoft. All rights reserved.
-// Licensed under the MIT license. See LICENSE file in the project root for full license information.
+// Licensed to the .NET Foundation under one or more agreements.
+// The .NET Foundation licenses this file to you under the MIT license.
+// See the LICENSE file in the project root for more information.
 
-using System;
-using System.Xml;
 using OLEDB.Test.ModuleCore;
 
-namespace XmlReaderTest.Common
+namespace System.Xml.Tests
 {
     public partial class TCAttributeXmlDeclaration : TCXMLReaderBaseGeneral
     {
-        // Type is XmlReaderTest.Common.TCAttributeXmlDeclaration
+        // Type is System.Xml.Tests.TCAttributeXmlDeclaration
         // Test Case
         public override void AddChildren()
         {
@@ -27,7 +26,7 @@ namespace XmlReaderTest.Common
 
             // for function TAXmlDecl_3
             {
-                this.AddChild(new CVariation(TAXmlDecl_3) { Attribute = new Variation("MoveToFirstAttribute/MoveToNextAttribute succesive calls") });
+                this.AddChild(new CVariation(TAXmlDecl_3) { Attribute = new Variation("MoveToFirstAttribute/MoveToNextAttribute successive calls") });
             }
 
 

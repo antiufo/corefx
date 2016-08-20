@@ -2,13 +2,12 @@
 <Project ToolsVersion="12.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003" DefaultTargets="Build">
   <Import Project="$([MSBuild]::GetDirectoryNameOfFileAbove($(MSBuildThisFileDirectory), dir.props))\dir.props" />
   <PropertyGroup>
-    <Configuration Condition="'$(Configuration)' == ''">Debug</Configuration>
-    <Platform Condition="'$(Platform)' == ''">AnyCPU</Platform>
     <ProjectGuid>{17CB2E3C-2904-4241-94DB-3894D24F35DA}</ProjectGuid>
-    <OutputType>Library</OutputType>
     <AssemblyName>System.Xml.XPath.XmlDocument</AssemblyName>
-    <AssemblyVersion>4.0.1.0</AssemblyVersion>
+    <AssemblyVersion>4.0.2.0</AssemblyVersion>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+    <PackageTargetFramework Condition="'$(PackageTargetFramework)' == ''">netstandard1.3</PackageTargetFramework>
+    <NuGetTargetMoniker Condition="'$(TargetGroup)' == ''">.NETStandard,Version=v1.3</NuGetTargetMoniker>
   </PropertyGroup>
   <!-- Default configurations to help VS understand the configurations -->
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">

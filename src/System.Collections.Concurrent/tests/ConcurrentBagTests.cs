@@ -1,5 +1,6 @@
-// Copyright (c) Microsoft. All rights reserved.
-// Licensed under the MIT license. See LICENSE file in the project root for full license information.
+// Licensed to the .NET Foundation under one or more agreements.
+// The .NET Foundation licenses this file to you under the MIT license.
+// See the LICENSE file in the project root for more information.
 
 using System.Diagnostics;
 using System.Threading;
@@ -15,6 +16,7 @@ namespace System.Collections.Concurrent.Tests
         public static void TestBasicScenarios()
         {
             ConcurrentBag<int> cb = new ConcurrentBag<int>();
+            Assert.True(cb.IsEmpty);
             Task[] tks = new Task[2];
             tks[0] = Task.Run(() =>
                 {
@@ -32,10 +34,7 @@ namespace System.Collections.Concurrent.Tests
                         bool ret = cb.TryTake(out item);
                         Assert.True(ret);
                         // loose check
-                        if (item != 4 && item != 5 && item != 6)
-                        {
-                            Assert.False(true, "Expected: 4|5|6; actual: " + item.ToString());
-                        }
+                        Assert.Contains(item, new[] { 4, 5, 6 });
                     }
                 });
 
@@ -211,11 +210,7 @@ namespace System.Collections.Concurrent.Tests
 
             if (take)
             {
-                if (bag.Count != bagCount - succeeded)
-                {
-                    Console.WriteLine("* RTest3_TakeOrPeek(" + threadsCount + "," + itemsPerThread + ")");
-                    Assert.False(true, "TryTake failed, the remaining count doesn't match the expected count");
-                }
+                Assert.Equal(bagCount - succeeded, bag.Count);
             }
             else
             {
@@ -261,14 +256,13 @@ namespace System.Collections.Concurrent.Tests
             //validation
             for (int i = 0; i < validation.Length; i++)
             {
-                if (validation[i] > 1)
-                {
-                    Console.WriteLine("* RTest4_AddAndTake(" + threadsCount + " )");
-                    Assert.False(true, "Add/Take failed, item " + i + " has been taken more than once");
-                }
-                else if (validation[i] == 0)
+                if (validation[i] == 0)
                 {
                     Assert.True(bag.TryTake(out value), String.Format("Add/Take failed, the list is not empty and TryTake returned false; thread count={0}", threadsCount));
+                }
+                else
+                {
+                    Assert.Equal(1, validation[i]);
                 }
             }
 
@@ -279,10 +273,9 @@ namespace System.Collections.Concurrent.Tests
         public static void RTest6_GetEnumerator()
         {
             ConcurrentBag<int> bag = new ConcurrentBag<int>();
-            foreach (int x in bag)
-            {
-                Assert.False(true, "RTest6_GetEnumerator:  GetEnumeration failed, returned items when the bag is empty");
-            }
+
+            // Empty bag should not enumerate
+            Assert.Empty(bag);
 
             for (int i = 0; i < 100; i++)
             {
@@ -362,10 +355,8 @@ namespace System.Collections.Concurrent.Tests
             //IEnumerable
             IEnumerable enumerable = bag as IEnumerable;
             Assert.False(enumerable == null, "RTest8_Interfaces:  ConcurrentBag<T> doesn't implement IEnumerable");
-            foreach (object o in enumerable)
-            {
-                Assert.True(false, "RTest8_Interfaces:  Enumerable returned items when the bag is empty");
-            }
+            // Empty bag shouldn't enumerate.
+            Assert.Empty(enumerable);
         }
 
         [Fact]

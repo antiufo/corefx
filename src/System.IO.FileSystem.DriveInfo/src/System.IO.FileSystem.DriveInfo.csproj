@@ -1,43 +1,42 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
 <Project ToolsVersion="12.0" DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <PropertyGroup>
+    <Configuration Condition="'$(Configuration)'==''">Windows_Debug</Configuration>
+  </PropertyGroup>
   <Import Project="$([MSBuild]::GetDirectoryNameOfFileAbove($(MSBuildThisFileDirectory), dir.props))\dir.props" />
   <PropertyGroup>
-    <Configuration Condition=" '$(Configuration)' == '' ">Windows_Debug</Configuration>
-    <Platform Condition=" '$(Platform)' == '' ">AnyCPU</Platform>
-    <OutputType>Library</OutputType>
     <RootNamespace>System.IO.FileSystem.DriveInfo</RootNamespace>
     <AssemblyName>System.IO.FileSystem.DriveInfo</AssemblyName>
-    <AssemblyVersion>4.0.0.0</AssemblyVersion>
+    <AssemblyVersion>4.0.1.0</AssemblyVersion>
     <ProjectGuid>{29C14AD7-DC03-45DC-897D-8DACC762707E}</ProjectGuid>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
-    <CLSCompliant>false</CLSCompliant>
+    <IsPartialFacadeAssembly Condition="'$(TargetGroup)' == 'net46'">true</IsPartialFacadeAssembly>
+    <PackageTargetFramework Condition="'$(TargetGroup)' == ''">netstandard1.3</PackageTargetFramework>
+    <NuGetTargetMoniker Condition="'$(TargetGroup)' == ''">.NETStandard,Version=v1.3</NuGetTargetMoniker>
   </PropertyGroup>
   <!-- Help VS understand available configurations -->
-  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Windows_Debug|AnyCPU' " />
-  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Windows_Release|AnyCPU' " />
-  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Linux_Debug|AnyCPU' " />
-  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Linux_Release|AnyCPU' " />
-  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'OSX_Debug|AnyCPU' " />
-  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'OSX_Release|AnyCPU' " />
-  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'FreeBSD_Debug|AnyCPU' "/>
-  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'FreeBSD_Release|AnyCPU' "/>
-  <PropertyGroup>
-    <TargetsBSD Condition="'$(TargetsOSX)' == 'true' or '$(TargetsFreeBSD)' == 'true'">true</TargetsBSD>
-  </PropertyGroup>
-
-  <ItemGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)' == 'Windows_Debug|AnyCPU'" />
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)' == 'Windows_Release|AnyCPU'" />
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)' == 'Unix_Debug|AnyCPU'" />
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)' == 'Unix_Release|AnyCPU'" />
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)' == 'net46_Debug|AnyCPU'" />
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)' == 'net46_Release|AnyCPU'" />
+  <ItemGroup Condition="'$(TargetGroup)' != 'net46'">
     <Compile Include="System\IO\DriveInfo.cs" />
     <Compile Include="System\IO\DriveNotFoundException.cs" />
     <Compile Include="System\IO\DriveType.cs" />
-    <Compile Include="$(CommonPath)\System\__HResults.cs">
-      <Link>Common\System\__HResults.cs</Link>
+    <Compile Include="$(CommonPath)\System\HResults.cs">
+      <Link>Common\System\HResults.cs</Link>
     </Compile>
     <Compile Include="$(CommonPath)\System\IO\PathInternal.cs">
       <Link>Common\System\IO\PathInternal.cs</Link>
     </Compile>
+    <Compile Include="$(CommonPath)\System\IO\PathInternal.CaseSensitivity.cs">
+      <Link>Common\System\IO\PathInternal.CaseSensitivity.cs</Link>
+    </Compile>
   </ItemGroup>
-  <ItemGroup Condition=" '$(TargetsWindows)' == 'true' ">
-    <Compile Include="System\IO\__Error.cs" />
+  <ItemGroup Condition=" '$(TargetsWindows)' == 'true' And '$(TargetGroup)' != 'net46' ">
+    <Compile Include="System\IO\Error.cs" />
     <Compile Include="System\IO\DriveInfo.Windows.cs" />
     <Compile Include="$(CommonPath)\Interop\Windows\Interop.Libraries.cs">
       <Link>Common\Interop\Windows\Interop.Libraries.cs</Link>
@@ -78,11 +77,8 @@
     <Compile Include="$(CommonPath)\System\IO\PathInternal.Windows.cs">
       <Link>Common\System\IO\PathInternal.Windows.cs</Link>
     </Compile>
-    <Compile Include="$(CommonPath)\System\IO\PathInternal.CaseInsensitive.cs">
-      <Link>Common\System\IO\PathInternal.CaseInsensitive.cs</Link>
-    </Compile>
   </ItemGroup>
-  <ItemGroup Condition=" '$(TargetsUnix)' == 'true' ">
+  <ItemGroup Condition=" '$(TargetsUnix)' == 'true' And '$(TargetGroup)' != 'net46' ">
     <Compile Include="System\IO\DriveInfo.Unix.cs" />
     <Compile Include="$(CommonPath)\Interop\Unix\Interop.Libraries.cs">
       <Link>Common\Interop\Unix\Interop.Libraries.cs</Link>
@@ -96,64 +92,15 @@
     <Compile Include="$(CommonPath)\System\IO\PathInternal.Unix.cs">
       <Link>Common\System\IO\PathInternal.Unix.cs</Link>
     </Compile>
-    <Compile Include="$(CommonPath)\Interop\Unix\libc\Interop.pathconf.cs">
-      <Link>Common\Interop\Unix\Interop.pathconf.cs</Link>
+    <Compile Include="$(CommonPath)\Interop\Unix\System.Native\Interop.PathConf.cs">
+      <Link>Common\Interop\Unix\Interop.PathConf.cs</Link>
     </Compile>
-    <Compile Include="$(CommonPath)\Interop\Unix\libc\Interop.mountpoints.cs">
-      <Link>Common\Interop\Unix\Interop.mountpoints.cs</Link>
-    </Compile>
-  </ItemGroup>
-  <ItemGroup Condition=" '$(TargetsLinux)' == 'true' ">
-    <Compile Include="System\IO\DriveInfo.Linux.cs" />
-    <Compile Include="$(CommonPath)\Interop\Linux\libc\Interop.endmntent.cs">
-      <Link>Common\Interop\Unix\Interop.endmntent.cs</Link>
-    </Compile>
-    <Compile Include="$(CommonPath)\Interop\Linux\libc\Interop.getmntent.cs">
-      <Link>Common\Interop\Unix\Interop.getmntent.cs</Link>
-    </Compile>
-    <Compile Include="$(CommonPath)\Interop\Linux\libc\Interop.setmntent.cs">
-      <Link>Common\Interop\Unix\Interop.setmntent.cs</Link>
-    </Compile>
-    <Compile Include="$(CommonPath)\System\IO\PathInternal.CaseSensitive.cs">
-      <Link>Common\System\IO\PathInternal.CaseSensitive.cs</Link>
-    </Compile>
-    <Compile Include="$(CommonPath)\Interop\Linux\libc\Interop.statfs.cs">
-      <Link>Common\Interop\Linux\Interop.statfs.cs</Link>
-    </Compile>
-    <Compile Include="$(CommonPath)\Interop\Linux\Interop.Libraries.cs">
-      <Link>Common\Interop\Linux\Interop.Libraries.cs</Link>
-    </Compile>
-    <Compile Include="$(CommonPath)\Interop\Linux\libc\Interop.PathConfNames.cs">
-      <Link>Common\Interop\Linux\Interop.PathConfNames.cs</Link>
+    <Compile Include="$(CommonPath)\Interop\Unix\System.Native\Interop.MountPoints.cs">
+      <Link>Common\Interop\Unix\Interop.MountPoints.cs</Link>
     </Compile>
   </ItemGroup>
-  <ItemGroup Condition=" '$(TargetsBSD)' == 'true' ">
-    <Compile Include="System\IO\DriveInfo.BSD.cs" />
-  </ItemGroup>
-  <ItemGroup Condition=" '$(TargetsOSX)' == 'true' ">
-    <Compile Include="$(CommonPath)\System\IO\PathInternal.CaseInsensitive.cs">
-      <Link>Common\System\IO\PathInternal.CaseInsensitive.cs</Link>
-    </Compile>
-    <Compile Include="$(CommonPath)\Interop\OSX\Interop.Libraries.cs">
-      <Link>Common\Interop\OSX\Interop.Libraries.cs</Link>
-    </Compile>
-    <Compile Include="$(CommonPath)\Interop\OSX\libc\Interop.statfs.cs">
-      <Link>Common\Interop\OSX\Interop.statfs.cs</Link>
-    </Compile>
-    <Compile Include="$(CommonPath)\Interop\OSX\libc\Interop.PathConfNames.cs">
-      <Link>Common\Interop\OSX\Interop.PathConfNames.cs</Link>
-    </Compile>
-  </ItemGroup>
-  <ItemGroup Condition=" '$(TargetsFreeBSD)' == 'true'">
-    <Compile Include="$(CommonPath)\Interop\FreeBSD\libc\Interop.statfs.cs">
-      <Link>Common\Interop\FreeBSD\Interop.statfs.cs</Link>
-    </Compile>
-    <Compile Include="$(CommonPath)\Interop\FreeBSD\Interop.Libraries.cs">
-      <Link>Common\Interop\FreeBSD\Interop.Libraries.cs</Link>
-    </Compile>
-    <Compile Include="$(CommonPath)\Interop\FreeBSD\libc\Interop.PathConfNames.cs">
-      <Link>Common\Interop\FreeBSD\Interop.PathConfNames.cs</Link>
-    </Compile>
+  <ItemGroup Condition="'$(TargetGroup)' == 'net46'">
+    <TargetingPackReference Include="mscorlib" />
   </ItemGroup>
   <ItemGroup>
     <None Include="project.json" />

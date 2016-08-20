@@ -1,5 +1,6 @@
-﻿// Copyright (c) Microsoft. All rights reserved.
-// Licensed under the MIT license. See LICENSE file in the project root for full license information.
+// Licensed to the .NET Foundation under one or more agreements.
+// The .NET Foundation licenses this file to you under the MIT license.
+// See the LICENSE file in the project root for more information.
 
 using Microsoft.Win32.SafeHandles;
 using System.ComponentModel;
@@ -64,6 +65,8 @@ namespace System.IO
         /// <summary>Stop monitoring the current directory.</summary>
         private void StopRaisingEvents()
         {
+            _enabled = false;
+
             // If we're not running, do nothing.
             if (IsHandleInvalid(_directoryHandle))
                 return;
@@ -74,7 +77,7 @@ namespace System.IO
             // Close the directory handle.  This will cause the async operation to stop processing.
             // This operation doesn't need to be atomic because the API will deal with a closed
             // handle appropriately. If we get here while asynchronously waiting on a change notification, 
-            // closing the directory handle should cause ReadDirectoryChangesCallback be be called,
+            // closing the directory handle should cause ReadDirectoryChangesCallback be called,
             // cleaning up the operation.  Note that it's critical to also null out the handle.  If the
             // handle is currently in use in a P/Invoke, it will have its reference count temporarily
             // increased, such that the disposal operation won't take effect and close the handle
@@ -82,9 +85,6 @@ namespace System.IO
             // check will see a valid handle, unless we also null it out.
             _directoryHandle.Dispose();
             _directoryHandle = null;
-
-            // Set enabled to false
-            _enabled = false;
         }
 
         private void FinalizeDispose()

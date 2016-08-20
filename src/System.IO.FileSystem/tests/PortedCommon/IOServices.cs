@@ -1,5 +1,6 @@
-﻿// Copyright (c) Microsoft. All rights reserved.
-// Licensed under the MIT license. See LICENSE file in the project root for full license information.
+// Licensed to the .NET Foundation under one or more agreements.
+// The .NET Foundation licenses this file to you under the MIT license.
+// See the LICENSE file in the project root for more information.
 
 using System;
 using System.Collections.Generic;
@@ -93,17 +94,11 @@ internal class IOServices
         return null;
     }
 
-    public static PathInfo GetPath(int characterCount, bool extended = false)
+    public static PathInfo GetPath(string rootPath, int characterCount, bool extended)
     {
-        string root = Path.GetTempPath();
         if (extended)
-            root = IOInputs.ExtendedPrefix + root;
-        return GetPath(root, characterCount);
-    }
-
-    public static PathInfo GetExtendedPath(int characterCount)
-    {
-        return GetPath(characterCount, extended: true);
+            rootPath = IOInputs.ExtendedPrefix + rootPath;
+        return GetPath(rootPath, characterCount);
     }
 
     public static PathInfo GetPath(string rootPath, int characterCount, int maxComponent = IOInputs.MaxComponent)

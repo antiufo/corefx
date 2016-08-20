@@ -1,5 +1,6 @@
-// Copyright (c) Microsoft. All rights reserved.
-// Licensed under the MIT license. See LICENSE file in the project root for full license information.
+// Licensed to the .NET Foundation under one or more agreements.
+// The .NET Foundation licenses this file to you under the MIT license.
+// See the LICENSE file in the project root for more information.
 
 using Microsoft.Win32.SafeHandles;
 using System.Collections.Generic;
@@ -92,6 +93,15 @@ namespace System.Diagnostics
         /// </devdoc>
         public Process()
         {
+            // This class once inherited a finalizer. For backward compatibility it has one so that 
+            // any derived class that depends on it will see the behaviour expected. Since it is
+            // not used by this class itself, suppress it immediately if this is not an instance
+            // of a derived class it doesn't suffer the GC burden of finalization.
+            if (GetType() == typeof(Process))
+            {
+                GC.SuppressFinalize(this);
+            }
+
             _machineName = ".";
             _outputStreamReadMode = StreamReadMode.Undefined;
             _errorStreamReadMode = StreamReadMode.Undefined;
@@ -99,6 +109,7 @@ namespace System.Diagnostics
 
         private Process(string machineName, bool isRemoteMachine, int processId, ProcessInfo processInfo)
         {
+            GC.SuppressFinalize(this);
             _processInfo = processInfo;
             _machineName = machineName;
             _isRemoteMachine = isRemoteMachine;
@@ -106,6 +117,11 @@ namespace System.Diagnostics
             _haveProcessId = true;
             _outputStreamReadMode = StreamReadMode.Undefined;
             _errorStreamReadMode = StreamReadMode.Undefined;
+        }
+
+        ~Process()
+        {
+            Dispose(false);
         }
 
         public SafeProcessHandle SafeHandle
@@ -388,7 +404,7 @@ namespace System.Diagnostics
             {
                 if (!Enum.IsDefined(typeof(ProcessPriorityClass), value))
                 {
-                    throw new ArgumentException(SR.Format(SR.InvalidEnumArgument, "value", (int)value, typeof(ProcessPriorityClass)));
+                    throw new ArgumentException(SR.Format(SR.InvalidEnumArgument, nameof(value), (int)value, typeof(ProcessPriorityClass)));
                 }
 
                 PriorityClassCore = value;
@@ -480,7 +496,7 @@ namespace System.Diagnostics
             {
                 if (value == null)
                 {
-                    throw new ArgumentNullException("value");
+                    throw new ArgumentNullException(nameof(value));
                 }
                 
                 if (Associated)
@@ -894,33 +910,6 @@ namespace System.Diagnostics
 
         /// <devdoc>
         ///    <para>
-        ///       Creates an array of <see cref='System.Diagnostics.Process'/> components that are associated with process resources on a
-        ///       remote computer. These process resources share the specified process name.
-        ///    </para>
-        /// </devdoc>
-        public static Process[] GetProcessesByName(string processName, string machineName)
-        {
-            if (processName == null) processName = String.Empty;
-            Process[] procs = GetProcesses(machineName);
-            List<Process> list = new List<Process>();
-
-            for (int i = 0; i < procs.Length; i++)
-            {
-                if (String.Equals(processName, procs[i].ProcessName, StringComparison.OrdinalIgnoreCase))
-                {
-                    list.Add(procs[i]);
-                }
-                else
-                {
-                    procs[i].Dispose();
-                }
-            }
-
-            return list.ToArray();
-        }
-
-        /// <devdoc>
-        ///    <para>
         ///       Creates a new <see cref='System.Diagnostics.Process'/>
         ///       component for each process resource on the local computer.
         ///    </para>
@@ -1069,7 +1058,11 @@ namespace System.Diagnostics
         {
             _processId = processId;
             _haveProcessId = true;
+            ConfigureAfterProcessIdSet();
         }
+
+        /// <summary>Additional optional configuration hook after a process ID is set.</summary>
+        partial void ConfigureAfterProcessIdSet();
 
         /// <devdoc>
         ///    <para>
@@ -1105,11 +1098,6 @@ namespace System.Diagnostics
             }
 
             return StartCore(startInfo);
-        }
-
-        private static Encoding GetEncoding(int codePage)
-        {
-            return EncodingHelper.GetSupportedConsoleEncoding(codePage);
         }
 
         /// <devdoc>
@@ -1149,7 +1137,7 @@ namespace System.Diagnostics
         {
             Process process = new Process();
             if (startInfo == null)
-                throw new ArgumentNullException("startInfo");
+                throw new ArgumentNullException(nameof(startInfo));
 
             process.StartInfo = startInfo;
             return process.Start() ? 
@@ -1165,16 +1153,31 @@ namespace System.Diagnostics
         {
             if (_watchingForExit)
             {
+                RegisteredWaitHandle rwh = null;
+                WaitHandle wh = null;
+
                 lock (this)
                 {
                     if (_watchingForExit)
                     {
                         _watchingForExit = false;
-                        _registeredWaitHandle.Unregister(null);
-                        _waitHandle.Dispose();
+
+                        wh = _waitHandle;
                         _waitHandle = null;
+
+                        rwh = _registeredWaitHandle;
                         _registeredWaitHandle = null;
                     }
+                }
+
+                if (rwh != null)
+                {
+                    rwh.Unregister(null);
+                }
+
+                if (wh != null)
+                {
+                    wh.Dispose();
                 }
             }
         }
@@ -1359,6 +1362,7 @@ namespace System.Diagnostics
         public void Dispose()
         {
             Dispose(true);
+            GC.SuppressFinalize(this);
         }
 
         /// <summary>

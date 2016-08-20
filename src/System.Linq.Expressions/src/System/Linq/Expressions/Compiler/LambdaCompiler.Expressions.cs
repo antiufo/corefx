@@ -1,5 +1,6 @@
-﻿// Copyright (c) Microsoft. All rights reserved.
-// Licensed under the MIT license. See LICENSE file in the project root for full license information.
+// Licensed to the .NET Foundation under one or more agreements.
+// The .NET Foundation licenses this file to you under the MIT license.
+// See the LICENSE file in the project root for more information.
 
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
@@ -135,7 +136,7 @@ namespace System.Linq.Expressions.Compiler
                 }
                 else
                 {
-                    // emit the with the flags and emit emit expression start
+                    // emit the node with the flags and emit expression start
                     EmitExpression(node, UpdateEmitExpressionStartFlag(flags, CompilationFlags.EmitExpressionStart));
                 }
             }
@@ -185,9 +186,8 @@ namespace System.Linq.Expressions.Compiler
                 // if the invoke target is a lambda expression tree, first compile it into a delegate
                 expr = Expression.Call(expr, expr.Type.GetMethod("Compile", Array.Empty<Type>()));
             }
-            expr = Expression.Call(expr, expr.Type.GetMethod("Invoke"), node.Arguments);
 
-            EmitExpression(expr);
+            EmitMethodCall(expr, expr.Type.GetMethod("Invoke"), node, CompilationFlags.EmitAsNoTail | CompilationFlags.EmitExpressionStart);
         }
 
         private void EmitInlinedInvoke(InvocationExpression invoke, CompilationFlags flags)
@@ -202,7 +202,7 @@ namespace System.Linq.Expressions.Compiler
             List<WriteBack> wb = EmitArguments(lambda.Type.GetMethod("Invoke"), invoke);
 
             // 2. Create the nested LambdaCompiler
-            var inner = new LambdaCompiler(this, lambda);
+            var inner = new LambdaCompiler(this, lambda, invoke);
 
             // 3. Emit the body
             // if the inlined lambda is the last expression of the whole lambda,
@@ -213,7 +213,7 @@ namespace System.Linq.Expressions.Compiler
             }
             inner.EmitLambdaBody(_scope, true, flags);
 
-            // 4. Emit writebacks if needed
+            // 4. Emit write-backs if needed
             EmitWriteBack(wb);
         }
 
@@ -233,9 +233,10 @@ namespace System.Linq.Expressions.Compiler
             }
 
             // Emit indexes. We don't allow byref args, so no need to worry
-            // about writebacks or EmitAddress
-            foreach (var arg in node.Arguments)
+            // about write-backs or EmitAddress
+            for (int i = 0, n = node.ArgumentCount; i < n; i++)
             {
+                var arg = node.GetArgument(i);
                 EmitExpression(arg);
             }
 
@@ -256,9 +257,10 @@ namespace System.Linq.Expressions.Compiler
             }
 
             // Emit indexes. We don't allow byref args, so no need to worry
-            // about writebacks or EmitAddress
-            foreach (var arg in index.Arguments)
+            // about write-backs or EmitAddress
+            for (int i = 0, n = index.ArgumentCount; i < n; i++)
             {
+                var arg = index.GetArgument(i);
                 EmitExpression(arg);
             }
 
@@ -291,15 +293,23 @@ namespace System.Linq.Expressions.Compiler
                 var method = node.Indexer.GetGetMethod(true);
                 EmitCall(objectType, method);
             }
-            else if (node.Arguments.Count != 1)
+            else
+            {
+                EmitGetArrayElement(objectType);
+            }
+        }
+
+        private void EmitGetArrayElement(Type arrayType)
+        {
+            if (!arrayType.IsVector())
             {
                 // Multidimensional arrays, call get
-                _ilg.Emit(OpCodes.Call, node.Object.Type.GetMethod("Get", BindingFlags.Public | BindingFlags.Instance));
+                _ilg.Emit(OpCodes.Call, arrayType.GetMethod("Get", BindingFlags.Public | BindingFlags.Instance));
             }
             else
             {
                 // For one dimensional arrays, emit load
-                _ilg.EmitLoadElement(node.Type);
+                _ilg.EmitLoadElement(arrayType.GetElementType());
             }
         }
 
@@ -311,15 +321,23 @@ namespace System.Linq.Expressions.Compiler
                 var method = node.Indexer.GetSetMethod(true);
                 EmitCall(objectType, method);
             }
-            else if (node.Arguments.Count != 1)
+            else
+            {
+                EmitSetArrayElement(objectType);
+            }
+        }
+
+        private void EmitSetArrayElement(Type arrayType)
+        {
+            if (!arrayType.IsVector())
             {
                 // Multidimensional arrays, call set
-                _ilg.Emit(OpCodes.Call, node.Object.Type.GetMethod("Set", BindingFlags.Public | BindingFlags.Instance));
+                _ilg.Emit(OpCodes.Call, arrayType.GetMethod("Set", BindingFlags.Public | BindingFlags.Instance));
             }
             else
             {
                 // For one dimensional arrays, emit store
-                _ilg.EmitStoreElement(node.Type);
+                _ilg.EmitStoreElement(arrayType.GetElementType());
             }
         }
 
@@ -408,7 +426,7 @@ namespace System.Linq.Expressions.Compiler
                 _ilg.Emit(callOp, mi);
             }
 
-            // Emit writebacks for properties passed as "ref" arguments
+            // Emit write-backs for properties passed as "ref" arguments
             EmitWriteBack(wb);
         }
 
@@ -448,11 +466,11 @@ namespace System.Linq.Expressions.Compiler
             // static, ref:     call
             // static, value:   call
             // virtual, ref:    callvirt
-            // virtual, value:  call -- eg, double.ToString must be a non-virtual call to be verifiable.
+            // virtual, value:  call -- e.g. double.ToString must be a non-virtual call to be verifiable.
             // instance, ref:   callvirt -- this looks wrong, but is verifiable and gives us a free null check.
             // instance, value: call
             //
-            // We never need to generate a nonvirtual call to a virtual method on a reference type because
+            // We never need to generate a non-virtual call to a virtual method on a reference type because
             // expression trees do not support "base.Foo()" style calling.
             // 
             // We could do an optimization here for the case where we know that the object is a non-null
@@ -473,7 +491,7 @@ namespace System.Linq.Expressions.Compiler
         }
 
         /// <summary>
-        /// Emits arguments to a call, and returns an array of writebacks that
+        /// Emits arguments to a call, and returns an array of write-backs that
         /// should happen after the call.
         /// </summary>
         private List<WriteBack> EmitArguments(MethodBase method, IArgumentProvider args)
@@ -482,7 +500,7 @@ namespace System.Linq.Expressions.Compiler
         }
 
         /// <summary>
-        /// Emits arguments to a call, and returns an array of writebacks that
+        /// Emits arguments to a call, and returns an array of write-backs that
         /// should happen after the call. For emitting dynamic expressions, we
         /// need to skip the first parameter of the method (the call site).
         /// </summary>
@@ -581,13 +599,16 @@ namespace System.Linq.Expressions.Compiler
 
             if (node.Constructor != null)
             {
+                if (node.Constructor.DeclaringType.GetTypeInfo().IsAbstract)
+                    throw Error.NonAbstractConstructorRequired();
+
                 List<WriteBack> wb = EmitArguments(node.Constructor, node);
                 _ilg.Emit(OpCodes.Newobj, node.Constructor);
                 EmitWriteBack(wb);
             }
             else
             {
-                Debug.Assert(node.Arguments.Count == 0, "Node with arguments must have a constructor.");
+                Debug.Assert(node.ArgumentCount == 0, "Node with arguments must have a constructor.");
                 Debug.Assert(node.Type.GetTypeInfo().IsValueType, "Only value type may have constructor not set.");
                 LocalBuilder temp = GetLocal(node.Type);
                 _ilg.Emit(OpCodes.Ldloca, temp);
@@ -670,7 +691,7 @@ namespace System.Linq.Expressions.Compiler
             {
                 // Note: the stloc/ldloc pattern is a bit suboptimal, but it
                 // saves us from having to spill stack when assigning to a
-                // byref parameter. We already make this same tradeoff for
+                // byref parameter. We already make this same trade-off for
                 // hoisted variables, see ElementStorage.EmitStore
 
                 LocalBuilder value = GetLocal(variable.Type);
@@ -1083,7 +1104,7 @@ namespace System.Linq.Expressions.Compiler
             if (fi != null) return fi.FieldType;
             PropertyInfo pi = member as PropertyInfo;
             if (pi != null) return pi.PropertyType;
-            throw Error.MemberNotFieldOrProperty(member);
+            throw Error.MemberNotFieldOrProperty(member, nameof(member));
         }
 
         #endregion

@@ -1,10 +1,12 @@
-// Copyright (c) Microsoft. All rights reserved.
-// Licensed under the MIT license. See LICENSE file in the project root for full license information.
+// Licensed to the .NET Foundation under one or more agreements.
+// The .NET Foundation licenses this file to you under the MIT license.
+// See the LICENSE file in the project root for more information.
 
 using Xunit;
+using System;
 using System.Xml;
 
-namespace XmlDocumentTests.XmlDocumentTests
+namespace System.Xml.Tests
 {
     public class NodeRemovingTests
     {
@@ -29,7 +31,7 @@ namespace XmlDocumentTests.XmlDocumentTests
             var xmlDocument = new XmlDocument();
             xmlDocument.LoadXml(@"<root> <elem1>text1</elem1> <elem2>text2</elem2> </root>");
 
-            XmlNodeChangedEventHandler handler = (s, e) => Assert.True(false, "Handler should have been removed");
+            XmlNodeChangedEventHandler handler = (s, e) => { throw new ShouldNotBeInvokedException(); };
             xmlDocument.NodeRemoving += handler;
             xmlDocument.NodeRemoving -= handler;
 

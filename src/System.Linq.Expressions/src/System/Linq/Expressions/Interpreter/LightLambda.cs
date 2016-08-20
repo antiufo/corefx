@@ -1,8 +1,10 @@
-// Copyright (c) Microsoft. All rights reserved.
-// Licensed under the MIT license. See LICENSE file in the project root for full license information.
+// Licensed to the .NET Foundation under one or more agreements.
+// The .NET Foundation licenses this file to you under the MIT license.
+// See the LICENSE file in the project root for more information.
 
 using System;
 using System.Collections.Generic;
+using System.Dynamic.Utils;
 using System.Linq.Expressions;
 using System.Reflection;
 using System.Reflection.Emit;
@@ -10,22 +12,11 @@ using System.Runtime.CompilerServices;
 using System.Security;
 using System.Text;
 using System.Threading;
-using System.Dynamic.Utils;
 
-using AstUtils = System.Linq.Expressions.Interpreter.Utils;
+using AstUtils = System.Linq.Expressions.Utils;
 
 namespace System.Linq.Expressions.Interpreter
 {
-    internal sealed class LightLambdaCompileEventArgs : EventArgs
-    {
-        public Delegate Compiled { get; private set; }
-
-        internal LightLambdaCompileEventArgs(Delegate compiled)
-        {
-            Compiled = compiled;
-        }
-    }
-
     public partial class LightLambda
     {
         private readonly IStrongBox[] _closure;

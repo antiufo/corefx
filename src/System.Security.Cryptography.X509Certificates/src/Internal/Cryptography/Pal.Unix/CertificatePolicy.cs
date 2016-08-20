@@ -1,5 +1,6 @@
-﻿// Copyright (c) Microsoft. All rights reserved.
-// Licensed under the MIT license. See LICENSE file in the project root for full license information.
+// Licensed to the .NET Foundation under one or more agreements.
+// The .NET Foundation licenses this file to you under the MIT license.
+// See the LICENSE file in the project root for more information.
 
 using System;
 using System.Collections.Generic;
@@ -43,7 +44,7 @@ namespace Internal.Cryptography.Pal
         private readonly CertificatePolicy[] _policies;
         private bool _failAllCertificatePolicies;
 
-        public CertificatePolicyChain(X509Certificate2Collection chain)
+        public CertificatePolicyChain(List<X509Certificate2> chain)
         {
             _policies = new CertificatePolicy[chain.Count];
 
@@ -161,7 +162,7 @@ namespace Internal.Cryptography.Pal
             return true;
         }
 
-        private void ReadPolicies(X509Certificate2Collection chain)
+        private void ReadPolicies(List<X509Certificate2> chain)
         {
             for (int i = 0; i < chain.Count; i++)
             {
@@ -341,7 +342,7 @@ namespace Internal.Cryptography.Pal
             return oids;
         }
 
-        private static ISet<string> ReadCertPolicyExtension(X509Extension extension)
+        internal static ISet<string> ReadCertPolicyExtension(X509Extension extension)
         {
             DerSequenceReader reader = new DerSequenceReader(extension.RawData);
             HashSet<string> policies = new HashSet<string>();

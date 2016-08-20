@@ -1,5 +1,6 @@
-// Copyright (c) Microsoft. All rights reserved.
-// Licensed under the MIT license. See LICENSE file in the project root for full license information.
+// Licensed to the .NET Foundation under one or more agreements.
+// The .NET Foundation licenses this file to you under the MIT license.
+// See the LICENSE file in the project root for more information.
 
 using Microsoft.Win32.SafeHandles;
 using System.Collections.Generic;
@@ -47,17 +48,12 @@ namespace System.IO
         [System.Security.SecuritySafeCritical]
         public override void CreateDirectory(string fullPath)
         {
-            int length = fullPath.Length;
-
-            // We need to trim the trailing slash or the code will try to create 2 directories of the same name.
-            if (length >= 2 && PathHelpers.EndsInDirectorySeparator(fullPath))
-                length--;
-
-            int lengthRoot = PathInternal.GetRootLength(fullPath);
+            if (PathInternal.IsDirectoryTooLong(fullPath))
+                throw new PathTooLongException(SR.IO_PathTooLong);
 
             // We can save a bunch of work if the directory we want to create already exists.  This also
             // saves us in the case where sub paths are inaccessible (due to ERROR_ACCESS_DENIED) but the
-            // final path is accessable and the directory already exists.  For example, consider trying
+            // final path is accessible and the directory already exists.  For example, consider trying
             // to create c:\Foo\Bar\Baz, where everything already exists but ACLS prevent access to c:\Foo
             // and c:\Foo\Bar.  In that case, this code will think it needs to create c:\Foo, and c:\Foo\Bar
             // and fail to due so, causing an exception to be thrown.  This is not what we want.
@@ -72,6 +68,14 @@ namespace System.IO
             // isn't threadsafe.
 
             bool somepathexists = false;
+
+            int length = fullPath.Length;
+
+            // We need to trim the trailing slash or the code will try to create 2 directories of the same name.
+            if (length >= 2 && PathHelpers.EndsInDirectorySeparator(fullPath))
+                length--;
+
+            int lengthRoot = PathInternal.GetRootLength(fullPath);
 
             if (length > lengthRoot)
             {
@@ -100,13 +104,13 @@ namespace System.IO
             bool r = true;
             int firstError = 0;
             String errorString = fullPath;
+
             // If all the security checks succeeded create all the directories
             while (stackDir.Count > 0)
             {
                 String name = stackDir[stackDir.Count - 1];
                 stackDir.RemoveAt(stackDir.Count - 1);
-                if (PathInternal.IsDirectoryTooLong(name))
-                    throw new PathTooLongException(SR.IO_PathTooLong);
+
                 r = Interop.mincore.CreateDirectory(name, ref secAttrs);
                 if (!r && (firstError == 0))
                 {
@@ -196,7 +200,7 @@ namespace System.IO
                 case SearchTarget.Both:
                     return Win32FileSystemEnumerableFactory.CreateFileSystemInfoIterator(fullPath, fullPath, searchPattern, searchOption);
                 default:
-                    throw new ArgumentException(SR.ArgumentOutOfRange_Enum, "searchTarget");
+                    throw new ArgumentException(SR.ArgumentOutOfRange_Enum, nameof(searchTarget));
             }
         }
 
@@ -211,7 +215,7 @@ namespace System.IO
                 Interop.mincore.WIN32_FIND_DATA findData;
                 findData = new Interop.mincore.WIN32_FIND_DATA();
 
-                // Remove trialing slash since this can cause grief to FindFirstFile. You will get an invalid argument error
+                // Remove trailing slash since this can cause grief to FindFirstFile. You will get an invalid argument error
                 String tempPath = path.TrimEnd(PathHelpers.DirectorySeparatorChars);
 
                 // For floppy drives, normally the OS will pop up a dialog saying
@@ -337,7 +341,7 @@ namespace System.IO
                 throw Win32Marshal.GetExceptionForLastWin32Error();
             String currentDirectory = sb.ToString();
             // Note that if we have somehow put our command prompt into short
-            // file name mode (ie, by running edlin or a DOS grep, etc), then
+            // file name mode (i.e. by running edlin or a DOS grep, etc), then
             // this will return a short file name.
             if (currentDirectory.IndexOf('~') >= 0)
             {
@@ -486,7 +490,7 @@ namespace System.IO
 
             // We want extended syntax so we can delete "extended" subdirectories and files
             // (most notably ones with trailing whitespace or periods)
-            RemoveDirectoryHelper(PathInternal.AddExtendedPathPrefix(fullPath), recursive, true);
+            RemoveDirectoryHelper(PathInternal.EnsureExtendedPrefix(fullPath), recursive, true);
         }
 
         [System.Security.SecurityCritical]  // auto-generated
@@ -510,7 +514,7 @@ namespace System.IO
                 Interop.mincore.WIN32_FIND_DATA data = new Interop.mincore.WIN32_FIND_DATA();
 
                 // Open a Find handle
-                using (SafeFindHandle hnd = Interop.mincore.FindFirstFile(fullPath + PathHelpers.DirectorySeparatorCharAsString + "*", ref data))
+                using (SafeFindHandle hnd = Interop.mincore.FindFirstFile(Directory.EnsureTrailingDirectorySeparator(fullPath) + "*", ref data))
                 {
                     if (hnd.IsInvalid)
                         throw Win32Marshal.GetExceptionForLastWin32Error(fullPath);
@@ -656,7 +660,7 @@ namespace System.IO
             {
                 int errorCode = Marshal.GetLastWin32Error();
                 if (errorCode == Interop.mincore.Errors.ERROR_INVALID_PARAMETER)
-                    throw new ArgumentException(SR.Arg_InvalidFileAttrs, "attributes");
+                    throw new ArgumentException(SR.Arg_InvalidFileAttrs, nameof(attributes));
                 throw Win32Marshal.GetExceptionForWin32Error(errorCode, fullPath);
             }
         }

@@ -1,5 +1,6 @@
-// Copyright (c) Microsoft. All rights reserved.
-// Licensed under the MIT license. See LICENSE file in the project root for full license information.
+// Licensed to the .NET Foundation under one or more agreements.
+// The .NET Foundation licenses this file to you under the MIT license.
+// See the LICENSE file in the project root for more information.
 
 // The RegexBoyerMoore object precomputes the Boyer-Moore
 // tables for fast string scanning. These tables allow
@@ -205,7 +206,7 @@ namespace System.Text.RegularExpressions
 
                         if (i == 0)
                         {
-                            System.Array.Copy(_negativeASCII, newarray, 128);
+                            System.Array.Copy(_negativeASCII, 0, newarray, 0, 128);
                             _negativeASCII = newarray;
                         }
 

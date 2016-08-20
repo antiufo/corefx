@@ -1,5 +1,6 @@
-// Copyright (c) Microsoft. All rights reserved.
-// Licensed under the MIT license. See LICENSE file in the project root for full license information.
+// Licensed to the .NET Foundation under one or more agreements.
+// The .NET Foundation licenses this file to you under the MIT license.
+// See the LICENSE file in the project root for more information.
 
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
@@ -87,7 +88,7 @@ namespace System.Dynamic.Utils
             return ((ReadOnlyCollection<T>)collectionOrT)[0];
         }
 
-        public static void ValidateArgumentTypes(MethodBase method, ExpressionType nodeKind, ref ReadOnlyCollection<Expression> arguments)
+        public static void ValidateArgumentTypes(MethodBase method, ExpressionType nodeKind, ref ReadOnlyCollection<Expression> arguments, string methodParamName)
         {
             Debug.Assert(nodeKind == ExpressionType.Invoke || nodeKind == ExpressionType.Call || nodeKind == ExpressionType.Dynamic || nodeKind == ExpressionType.New);
 
@@ -100,7 +101,7 @@ namespace System.Dynamic.Utils
             {
                 Expression arg = arguments[i];
                 ParameterInfo pi = pis[i];
-                arg = ValidateOneArgument(method, nodeKind, arg, pi);
+                arg = ValidateOneArgument(method, nodeKind, arg, pi, methodParamName, nameof(arguments));
 
                 if (newArgs == null && arg != arguments[i])
                 {
@@ -141,35 +142,35 @@ namespace System.Dynamic.Utils
             }
         }
 
-        public static Expression ValidateOneArgument(MethodBase method, ExpressionType nodeKind, Expression arg, ParameterInfo pi)
+        public static Expression ValidateOneArgument(MethodBase method, ExpressionType nodeKind, Expression arguments, ParameterInfo pi, string methodParamName, string argumentParamName)
         {
-            RequiresCanRead(arg, "arguments");
+            RequiresCanRead(arguments, argumentParamName);
             Type pType = pi.ParameterType;
             if (pType.IsByRef)
             {
                 pType = pType.GetElementType();
             }
-            TypeUtils.ValidateType(pType);
-            if (!TypeUtils.AreReferenceAssignable(pType, arg.Type))
+            TypeUtils.ValidateType(pType, methodParamName);
+            if (!TypeUtils.AreReferenceAssignable(pType, arguments.Type))
             {
-                if (!TryQuote(pType, ref arg))
+                if (!TryQuote(pType, ref arguments))
                 {
                     // Throw the right error for the node we were given
                     switch (nodeKind)
                     {
                         case ExpressionType.New:
-                            throw Error.ExpressionTypeDoesNotMatchConstructorParameter(arg.Type, pType);
+                            throw Error.ExpressionTypeDoesNotMatchConstructorParameter(arguments.Type, pType, argumentParamName);
                         case ExpressionType.Invoke:
-                            throw Error.ExpressionTypeDoesNotMatchParameter(arg.Type, pType);
+                            throw Error.ExpressionTypeDoesNotMatchParameter(arguments.Type, pType);
                         case ExpressionType.Dynamic:
                         case ExpressionType.Call:
-                            throw Error.ExpressionTypeDoesNotMatchMethodParameter(arg.Type, pType, method);
+                            throw Error.ExpressionTypeDoesNotMatchMethodParameter(arguments.Type, pType, method);
                         default:
                             throw ContractUtils.Unreachable;
                     }
                 }
             }
-            return arg;
+            return arguments;
         }
 
         public static void RequiresCanRead(Expression expression, string paramName)

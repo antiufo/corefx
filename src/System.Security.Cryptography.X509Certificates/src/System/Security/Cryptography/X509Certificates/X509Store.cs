@@ -1,5 +1,6 @@
-// Copyright (c) Microsoft. All rights reserved.
-// Licensed under the MIT license. See LICENSE file in the project root for full license information.
+// Licensed to the .NET Foundation under one or more agreements.
+// The .NET Foundation licenses this file to you under the MIT license.
+// See the LICENSE file in the project root for more information.
 
 using System;
 using System.IO;
@@ -16,14 +17,14 @@ namespace System.Security.Cryptography.X509Certificates
     public sealed class X509Store : IDisposable
     {
         public X509Store()
-            : this("MY", StoreLocation.CurrentUser)
+            : this(StoreName.My, StoreLocation.CurrentUser)
         {
         }
 
         public X509Store(StoreName storeName, StoreLocation storeLocation)
         {
             if (storeLocation != StoreLocation.CurrentUser && storeLocation != StoreLocation.LocalMachine)
-                throw new ArgumentException(String.Format(CultureInfo.CurrentCulture, SR.Arg_EnumIllegalVal, "storeLocation"));
+                throw new ArgumentException(string.Format(CultureInfo.CurrentCulture, SR.Arg_EnumIllegalVal, "storeLocation"));
 
             switch (storeName)
             {
@@ -52,33 +53,30 @@ namespace System.Security.Cryptography.X509Certificates
                     Name = "TrustedPublisher";
                     break;
                 default:
-                    throw new ArgumentException(String.Format(CultureInfo.CurrentCulture, SR.Arg_EnumIllegalVal, "storeName"));
+                    throw new ArgumentException(string.Format(CultureInfo.CurrentCulture, SR.Arg_EnumIllegalVal, "storeName"));
             }
 
             Location = storeLocation;
-            return;
         }
 
-        public X509Store(String storeName, StoreLocation storeLocation)
+        public X509Store(string storeName, StoreLocation storeLocation)
         {
             if (storeLocation != StoreLocation.CurrentUser && storeLocation != StoreLocation.LocalMachine)
-                throw new ArgumentException(String.Format(CultureInfo.CurrentCulture, SR.Arg_EnumIllegalVal, "storeLocation"));
+                throw new ArgumentException(string.Format(CultureInfo.CurrentCulture, SR.Arg_EnumIllegalVal, "storeLocation"));
 
             Location = storeLocation;
             Name = storeName;
-            return;
         }
 
         public StoreLocation Location { get; private set; }
 
-        public String Name { get; private set; }
+        public string Name { get; private set; }
 
 
         public void Open(OpenFlags flags)
         {
             Close();
             _storePal = StorePal.FromSystemStore(Name, Location, flags);
-            return;
         }
 
         public X509Certificate2Collection Certificates
@@ -88,7 +86,7 @@ namespace System.Security.Cryptography.X509Certificates
                 X509Certificate2Collection certificates = new X509Certificate2Collection();
                 if (_storePal != null)
                 {
-                    _storePal.CopyTo(certificates);
+                    _storePal.CloneTo(certificates);
                 }
                 return certificates;
             }
@@ -97,25 +95,23 @@ namespace System.Security.Cryptography.X509Certificates
         public void Add(X509Certificate2 certificate)
         {
             if (certificate == null)
-                throw new ArgumentNullException("certificate");
+                throw new ArgumentNullException(nameof(certificate));
 
             if (_storePal == null)
                 throw new CryptographicException(SR.Cryptography_X509_StoreNotOpen);
 
             _storePal.Add(certificate.Pal);
-            return;
         }
 
         public void Remove(X509Certificate2 certificate)
         {
             if (certificate == null)
-                throw new ArgumentNullException("certificate");
+                throw new ArgumentNullException(nameof(certificate));
 
             if (_storePal == null)
                 throw new CryptographicException(SR.Cryptography_X509_StoreNotOpen);
 
             _storePal.Remove(certificate.Pal);
-            return;
         }
 
         public void Dispose()
@@ -133,7 +129,7 @@ namespace System.Security.Cryptography.X509Certificates
             }
         }
 
-        private IStorePal _storePal = null;
+        private IStorePal _storePal;
     }
 }
 

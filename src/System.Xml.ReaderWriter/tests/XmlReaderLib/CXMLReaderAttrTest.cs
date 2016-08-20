@@ -1,14 +1,12 @@
-// Copyright (c) Microsoft. All rights reserved.
-// Licensed under the MIT license. See LICENSE file in the project root for full license information.
-
-using System;
-using System.IO;
-using System.Xml;
+// Licensed to the .NET Foundation under one or more agreements.
+// The .NET Foundation licenses this file to you under the MIT license.
+// See the LICENSE file in the project root for more information.
 
 using OLEDB.Test.ModuleCore;
+using System.IO;
 using XmlCoreTest.Common;
 
-namespace XmlReaderTest.Common
+namespace System.Xml.Tests
 {
     ////////////////////////////////////////////////////////////////
     // TestCase TCXML AttributeAccess
@@ -1560,7 +1558,7 @@ namespace XmlReaderTest.Common
         [Variation("XmlReader: Does not count depth for attributes of xml decl. and Doctype")]
         public int MoveToNextAttribute9()
         {
-            ReloadSource(TestData + "Common/Bug424573.xml");
+            ReloadSource(Path.Combine(TestData, "Common", "Bug424573.xml"));
             DataReader.Read();
             if (DataReader.HasAttributes)
             {

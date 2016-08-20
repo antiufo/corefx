@@ -1,5 +1,6 @@
-// Copyright (c) Microsoft. All rights reserved.
-// Licensed under the MIT license. See LICENSE file in the project root for full license information.
+// Licensed to the .NET Foundation under one or more agreements.
+// The .NET Foundation licenses this file to you under the MIT license.
+// See the LICENSE file in the project root for more information.
 
 namespace System.Linq
 {
@@ -18,16 +19,6 @@ namespace System.Linq
             return SR.Format(SR.ArgumentNotValid, message);
         }
 
-        internal static string UnhandledExpressionType(object message)
-        {
-            return SR.Format(SR.UnhandledExpressionType, message);
-        }
-
-        internal static string UnhandledBindingType(object message)
-        {
-            return SR.Format(SR.UnhandledBindingType, message);
-        }
-
         internal static string NoMethodOnType(string name, object type)
         {
             return SR.Format(SR.NoMethodOnType, name, type);
@@ -36,6 +27,11 @@ namespace System.Linq
         internal static string NoMethodOnTypeMatchingArguments(string name, object type)
         {
             return SR.Format(SR.NoMethodOnTypeMatchingArguments, name, type);
+        }
+
+        internal static string EnumeratingNullEnumerableExpression()
+        {
+            return SR.EnumeratingNullEnumerableExpression;
         }
     }
 }

@@ -1,13 +1,12 @@
-// Copyright (c) Microsoft. All rights reserved.
-// Licensed under the MIT license. See LICENSE file in the project root for full license information.
+// Licensed to the .NET Foundation under one or more agreements.
+// The .NET Foundation licenses this file to you under the MIT license.
+// See the LICENSE file in the project root for more information.
 
-using Xunit;
-using System;
-using System.Threading;
-using System.Threading.Tasks;
 using System.Diagnostics;
+using System.Threading.Tasks;
+using Xunit;
 
-namespace Test
+namespace System.Threading.Tests
 {
     /// <summary>
     /// SpinLock unit tests
@@ -42,42 +41,6 @@ namespace Test
             }
         }
 
-        /// <summary>
-        /// Run all SpinLock tests
-        /// </summary>
-        /// <returns>True if all tests passed, false if at least one test failed</returns>
-        [Fact]
-        [OuterLoop]
-        public static void RunSpinLockTests()
-        {
-            for (int i = 0; i < 2; i++)
-            {
-                bool b;
-                if (i == 0)
-                {
-                    Debug.WriteLine("NO THREAD IDS -- new SpinLock(true)");
-                    b = true;
-                }
-                else
-                {
-                    Debug.WriteLine("WITH THREAD IDS -- new SpinLock(false)");
-                    b = false;
-                }
-
-                RunSpinLockTest0_Enter(2, b);
-                RunSpinLockTest0_Enter(128, b);
-                RunSpinLockTest0_Enter(256, b);
-
-                RunSpinLockTest1_TryEnter(2, b);
-                RunSpinLockTest1_TryEnter(128, b);
-                RunSpinLockTest1_TryEnter(256, b);
-
-                RunSpinLockTest2_TryEnter(2, b);
-                RunSpinLockTest2_TryEnter(128, b);
-                RunSpinLockTest2_TryEnter(256, b);
-            }
-        }
-
         [Fact]
         public static void RunSpinLockTests_NegativeTests()
         {
@@ -106,7 +69,15 @@ namespace Test
         /// </summary>
         /// <param name="threadsCount">Number of threads that call enter/exit</param>
         /// <returns>True if succeeded, false otherwise</returns>
-        private static void RunSpinLockTest0_Enter(int threadsCount, bool enableThreadIDs)
+        [OuterLoop]
+        [Theory]
+        [InlineData(2, false)]
+        [InlineData(128, false)]
+        [InlineData(256, false)]
+        [InlineData(2, true)]
+        [InlineData(128, true)]
+        [InlineData(256, true)]
+        public static void RunSpinLockTest0_Enter(int threadsCount, bool enableThreadIDs)
         {
             // threads array
             Task[] threads = new Task[threadsCount];
@@ -159,10 +130,7 @@ namespace Test
                 threads[i].Wait();
             }
             // count must be equal to the threads count
-            if (succeeded != threadsCount)
-            {
-                Assert.True(false, string.Format("SpinLock.Enter() failed, actual count: " + succeeded + " expected: " + threadsCount));
-            }
+            Assert.Equal(threadsCount, succeeded);
         }
 
         /// <summary>
@@ -171,7 +139,15 @@ namespace Test
         /// </summary>
         /// <param name="threadsCount">Number of threads that call enter/exit</param>
         /// <returns>True if succeeded, false otherwise</returns>
-        private static void RunSpinLockTest1_TryEnter(int threadsCount, bool enableThreadIDs)
+        [OuterLoop]
+        [Theory]
+        [InlineData(2, false)]
+        [InlineData(128, false)]
+        [InlineData(256, false)]
+        [InlineData(2, true)]
+        [InlineData(128, true)]
+        [InlineData(256, true)]
+        public static void RunSpinLockTest1_TryEnter(int threadsCount, bool enableThreadIDs)
         {
             for (int j = 0; j < 2; j++)
             {
@@ -208,11 +184,7 @@ namespace Test
                     threads[i].Wait();
                 }
                 // succeeded + failed must be equal to the threads count.
-                if (succeeded + failed != threadsCount)
-                {
-                    Assert.True(false, string.Format("SpinLock.TryEnter() failed, actual count: " + (succeeded + failed) +
-                        " expected :" + threadsCount));
-                }
+                Assert.Equal(threadsCount, succeeded + failed);
             }
         }
 
@@ -221,7 +193,15 @@ namespace Test
         /// </summary>
         /// <param name="threadsCount">Number of threads that call enter/exit</param>
         /// <returns>True if succeeded, false otherwise</returns>
-        private static void RunSpinLockTest2_TryEnter(int threadsCount, bool enableThreadIDs)
+        [OuterLoop]
+        [Theory]
+        [InlineData(2, false)]
+        [InlineData(128, false)]
+        [InlineData(256, false)]
+        [InlineData(2, true)]
+        [InlineData(128, true)]
+        [InlineData(256, true)]
+        public static void RunSpinLockTest2_TryEnter(int threadsCount, bool enableThreadIDs)
         {
             for (int j = 0; j < 2; j++)
             {
@@ -252,7 +232,7 @@ namespace Test
                             // Failed to get the lock within the timeout
                             Interlocked.Increment(ref failed);
                         }
-                    }, i);
+                    }, i, CancellationToken.None, TaskCreationOptions.LongRunning);
                     threads[i].Start(TaskScheduler.Default);
                 }
                 // Wait all threads
@@ -261,11 +241,7 @@ namespace Test
                     threads[i].Wait();
                 }
                 // succeeded + failed must be equal to the threads count.
-                if (succeeded + failed != threadsCount)
-                {
-                    Assert.True(false, string.Format("SpinLock.TryEnter() failed, actual count: " + (succeeded + failed) +
-                        " expected :" + threadsCount));
-                }
+                Assert.Equal(threadsCount, succeeded + failed);
             }
         }
 
@@ -275,7 +251,6 @@ namespace Test
         /// <returns>True if succeeded, false otherwise</returns>
         private static void RunSpinLockTest3_TryEnter(bool enableThreadIDs)
         {
-            Exception exception = null;
             SpinLock slock = new SpinLock(enableThreadIDs);
             bool lockTaken = false;
 
@@ -284,76 +259,25 @@ namespace Test
             {
                 // Test recursive locks
                 slock.Enter(ref lockTaken);
-                try
-                {
-                    if (lockTaken)
-                    {
-                        bool dummy = false;
-                        // reacquire the lock
-                        slock.Enter(ref dummy);
-                    }
-                }
-                catch (Exception ex)
-                {
-                    // LockRecursionException must be thrown
-                    exception = ex;
-                }
-                if (lockTaken)
-                {
-                    slock.Exit();
-                    if (exception == null || exception.GetType() != typeof(LockRecursionException))
-                    {
-                        Assert.True(false, string.Format("SpinLock.TryEnter() failed, recursive locks without exception"));
-                    }
-                    if (slock.IsHeldByCurrentThread)
-                    {
-                        Assert.True(false, string.Format("SpinLock.TryEnter() failed, IsHeld is true after calling Exit"));
-                    }
-                }
-                else
-                {
-                    Assert.True(false, string.Format("LockRecursionException was not thrown?"));
-                }
+                Assert.True(lockTaken);
+                Assert.Throws<LockRecursionException>(() => { bool dummy = false; slock.Enter(ref dummy); });
+
+                slock.Exit();
+                Assert.False(slock.IsHeldByCurrentThread);
             }
             #endregion
 
             #region timeout > int.max
             // Test invalid argument handling, too long timeout
-            exception = null;
-            try
-            {
-                lockTaken = false;
-                slock.TryEnter(TimeSpan.MaxValue, ref lockTaken);
-            }
-            catch (Exception ex)
-            {
-                exception = ex;
-            }
-            if (exception == null || exception.GetType() != typeof(ArgumentOutOfRangeException))
-            {
-                Assert.True(false, string.Format(@"SpinLock.TryEnter() failed, timeout.Totalmilliseconds > int.maxValue
-                 without throwing ArgumentOutOfRangeException " + exception));
-            }
-            #endregion
+            Assert.Throws<ArgumentOutOfRangeException>(() => { bool lt = false; slock.TryEnter(TimeSpan.MaxValue, ref lt); });
+
+            #endregion timeout > int.max
 
             #region Timeout > int.max
             // Test invalid argument handling, timeout < -1
-            exception = null;
-            try
-            {
-                lockTaken = false;
-                slock.TryEnter(-2, ref lockTaken);
-            }
-            catch (Exception ex)
-            {
-                exception = ex;
-            }
-            if (exception == null || exception.GetType() != typeof(ArgumentOutOfRangeException))
-            {
-                Assert.True(false, string.Format(@"SpinLock.TryEnter() failed, timeout < -1
-                 without throwing ArgumentOutOfRangeException"));
-            }
-            #endregion
+            Assert.Throws<ArgumentOutOfRangeException>(() => { bool lt = false; slock.TryEnter(-2, ref lt); });
+
+            #endregion Timeout > int.max
         }
 
         /// <summary>
@@ -362,46 +286,19 @@ namespace Test
         /// <returns>True if succeeded, false otherwise</returns>
         private static void RunSpinLockTest4_Exit(bool enableThreadIDs)
         {
-            Exception exception = null;
             SpinLock slock = new SpinLock(enableThreadIDs);
             bool lockTaken = false;
             slock.Enter(ref lockTaken);
             slock.Exit();
             if (enableThreadIDs)
             {
-                if (slock.IsHeldByCurrentThread)
-                {
-                    Assert.True(false, string.Format("SpinLock.Exit() failed, IsHeld is true after calling Exit"));
-                }
+                Assert.False(slock.IsHeldByCurrentThread);
+                Assert.Throws<SynchronizationLockException>(() => slock.Exit(true));
+                Assert.Throws<SynchronizationLockException>(() => slock.Exit(false));
             }
             else
             {
-                if (slock.IsHeld)
-                {
-                    Assert.True(false, string.Format("SpinLock.Exit() failed, IsHeld is true after calling Exit"));
-                }
-            }
-
-            for (int i = 0; i < 2; i++)
-            {
-                bool useBarrier = i == 0;
-                // Calling Exit without owning the lock
-                try
-                {
-                    slock.Exit(useBarrier);
-                }
-                catch (Exception ex)
-                {
-                    // SynchronizationLockException must be thrown
-                    exception = ex;
-                }
-            }
-            if (enableThreadIDs)
-            {
-                if (exception == null || exception.GetType() != typeof(SynchronizationLockException))
-                {
-                    Assert.True(false, string.Format(@"SpinLock.Exit() failed, calling Exit without owning the lock"));
-                }
+                Assert.False(slock.IsHeld);
             }
         }
 

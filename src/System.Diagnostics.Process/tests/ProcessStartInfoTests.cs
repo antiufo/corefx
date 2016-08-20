@@ -1,19 +1,21 @@
-﻿// Copyright (c) Microsoft. All rights reserved.
-// Licensed under the MIT license. See LICENSE file in the project root for full license information.
+// Licensed to the .NET Foundation under one or more agreements.
+// The .NET Foundation licenses this file to you under the MIT license.
+// See the LICENSE file in the project root for more information.
 
-using System.Collections.Generic;
-using System.Security;
-using System.Security.Principal;
 using Microsoft.Win32;
-using System.IO;
-using Xunit;
 using Microsoft.Win32.SafeHandles;
+using System.Collections;
+using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using System.Runtime.InteropServices;
+using System.Security.Principal;
+using Xunit;
+using System.Text;
 
-namespace System.Diagnostics.ProcessTests
+namespace System.Diagnostics.Tests
 {
-    public class ProcessStartInfoTests : ProcessTestBase
+    public partial class ProcessStartInfoTests : ProcessTestBase
     {
         [Fact]
         public void TestEnvironmentProperty()
@@ -182,16 +184,100 @@ namespace System.Diagnostics.ProcessTests
         }
 
         [Fact]
-        public void TestUseShellExecuteProperty()
+        public void TestEnvironmentOfChildProcess()
+        {
+            const string ItemSeparator = "CAFF9451396B4EEF8A5155A15BDC2080"; // random string that shouldn't be in any env vars; used instead of newline to separate env var strings
+            const string ExtraEnvVar = "TestEnvironmentOfChildProcess_SpecialStuff";
+            Environment.SetEnvironmentVariable(ExtraEnvVar, "\x1234" + Environment.NewLine + "\x5678"); // ensure some Unicode characters and newlines are in the output
+            try
+            {
+                // Schedule a process to see what env vars it gets.  Have it write out those variables
+                // to its output stream so we can read them.
+                Process p = CreateProcess(() =>
+                {
+                    Console.Write(string.Join(ItemSeparator, Environment.GetEnvironmentVariables().Cast<DictionaryEntry>().Select(e => e.Key + "=" + e.Value)));
+                    return SuccessExitCode;
+                });
+                p.StartInfo.StandardOutputEncoding = Encoding.UTF8;
+                p.StartInfo.RedirectStandardOutput = true;
+                p.Start();
+                string output = p.StandardOutput.ReadToEnd();
+                Assert.True(p.WaitForExit(WaitInMS));
+
+                // Parse the env vars from the child process
+                var actualEnv = new HashSet<string>(output.Split(new[] { ItemSeparator }, StringSplitOptions.None));
+
+                // Validate against StartInfo.Environment.
+                var startInfoEnv = new HashSet<string>(p.StartInfo.Environment.Select(e => e.Key + "=" + e.Value));
+                Assert.True(startInfoEnv.SetEquals(actualEnv),
+                    string.Format("Expected: {0}{1}Actual: {2}",
+                        string.Join(", ", startInfoEnv.Except(actualEnv)),
+                        Environment.NewLine,
+                        string.Join(", ", actualEnv.Except(startInfoEnv))));
+
+                // Validate against current process. (Profilers / code coverage tools can add own environment variables 
+                // but we start child process without them. Thus the set of variables from the child process could
+                // be a subset of variables from current process.)
+                var envEnv = new HashSet<string>(Environment.GetEnvironmentVariables().Cast<DictionaryEntry>().Select(e => e.Key + "=" + e.Value));
+                Assert.True(envEnv.IsSupersetOf(actualEnv),
+                    string.Format("Expected: {0}{1}Actual: {2}",
+                        string.Join(", ", envEnv.Except(actualEnv)),
+                        Environment.NewLine,
+                        string.Join(", ", actualEnv.Except(envEnv))));
+            }
+            finally
+            {
+                Environment.SetEnvironmentVariable(ExtraEnvVar, null);
+            }
+        }
+
+        [PlatformSpecific(PlatformID.Windows)] // UseShellExecute currently not supported on Windows
+        [Fact]
+        public void TestUseShellExecuteProperty_SetAndGet_Windows()
         {
             ProcessStartInfo psi = new ProcessStartInfo();
+            Assert.False(psi.UseShellExecute);
 
             // Calling the setter
-            psi.UseShellExecute = false;
             Assert.Throws<PlatformNotSupportedException>(() => { psi.UseShellExecute = true; });
+            psi.UseShellExecute = false;
 
             // Calling the getter
             Assert.False(psi.UseShellExecute, "UseShellExecute=true is not supported on onecore.");
+        }
+
+        [PlatformSpecific(PlatformID.AnyUnix)]
+        [Fact]
+        public void TestUseShellExecuteProperty_SetAndGet_Unix()
+        {
+            ProcessStartInfo psi = new ProcessStartInfo();
+            Assert.False(psi.UseShellExecute);
+
+            psi.UseShellExecute = true;
+            Assert.True(psi.UseShellExecute);
+
+            psi.UseShellExecute = false;
+            Assert.False(psi.UseShellExecute);
+        }
+
+        [PlatformSpecific(PlatformID.AnyUnix)]
+        [Theory]
+        [InlineData(0)]
+        [InlineData(1)]
+        [InlineData(2)]
+        public void TestUseShellExecuteProperty_Redirects_NotSupported(int std)
+        {
+            Process p = CreateProcessLong();
+            p.StartInfo.UseShellExecute = true;
+
+            switch (std)
+            {
+                case 0: p.StartInfo.RedirectStandardInput = true; break;
+                case 1: p.StartInfo.RedirectStandardOutput = true; break;
+                case 2: p.StartInfo.RedirectStandardError = true; break;
+            }
+
+            Assert.Throws<InvalidOperationException>(() => p.Start());
         }
 
         [Fact]
@@ -210,7 +296,7 @@ namespace System.Diagnostics.ProcessTests
         [Theory, InlineData(true), InlineData(false)]
         public void TestCreateNoWindowProperty(bool value)
         {
-            Process testProcess = CreateProcessInfinite();
+            Process testProcess = CreateProcessLong();
             try
             {
                 testProcess.StartInfo.CreateNoWindow = value;
@@ -224,6 +310,39 @@ namespace System.Diagnostics.ProcessTests
                     testProcess.Kill();
 
                 Assert.True(testProcess.WaitForExit(WaitInMS));
+            }
+        }
+
+
+        [Fact, PlatformSpecific(PlatformID.AnyUnix)]
+        public void TestUserCredentialsPropertiesOnUnix()
+        {
+            Assert.Throws<PlatformNotSupportedException>(() => _process.StartInfo.Domain);
+            Assert.Throws<PlatformNotSupportedException>(() => _process.StartInfo.UserName);
+            Assert.Throws<PlatformNotSupportedException>(() => _process.StartInfo.PasswordInClearText);
+            Assert.Throws<PlatformNotSupportedException>(() => _process.StartInfo.LoadUserProfile);
+        }
+
+        [Fact]
+        public void TestWorkingDirectoryProperty()
+        {
+            // check defaults
+            Assert.Equal(string.Empty, _process.StartInfo.WorkingDirectory);
+
+            Process p = CreateProcessLong();
+            p.StartInfo.WorkingDirectory = Directory.GetCurrentDirectory();
+
+            try
+            {
+                p.Start();
+                Assert.Equal(Directory.GetCurrentDirectory(), p.StartInfo.WorkingDirectory);
+            }
+            finally
+            {
+                if (!p.HasExited)
+                    p.Kill();
+
+                Assert.True(p.WaitForExit(WaitInMS));
             }
         }
 
@@ -241,16 +360,20 @@ namespace System.Diagnostics.ProcessTests
                 return; // test is irrelevant if we can't add a user
             }
 
-            Process p = CreateProcessInfinite();
-
-            p.StartInfo.LoadUserProfile = true;
-            p.StartInfo.UserName = username;
-            p.StartInfo.PasswordInClearText = password;
-
+            bool hasStarted = false;
             SafeProcessHandle handle = null;
+            Process p = null;
+
             try
             {
-                p.Start();
+                p = CreateProcessLong();
+
+                p.StartInfo.LoadUserProfile = true;
+                p.StartInfo.UserName = username;
+                p.StartInfo.PasswordInClearText = password;
+
+                hasStarted = p.Start();
+
                 if (Interop.OpenProcessToken(p.SafeHandle, 0x8u, out handle))
                 {
                     SecurityIdentifier sid;
@@ -270,46 +393,19 @@ namespace System.Diagnostics.ProcessTests
             }
             finally
             {
+                IEnumerable<uint> collection = new uint[] { 0 /* NERR_Success */, 2221 /* NERR_UserNotFound */ };
+                Assert.Contains<uint>(Interop.NetUserDel(null, username), collection);
+
                 if (handle != null)
                     handle.Dispose();
 
-                if (!p.HasExited)
-                    p.Kill();
+                if (hasStarted)
+                {
+                    if (!p.HasExited)
+                        p.Kill();
 
-                Interop.NetUserDel(null, username);
-                Assert.True(p.WaitForExit(WaitInMS));
-            }
-        }
-
-        [Fact, PlatformSpecific(PlatformID.AnyUnix)]
-        public void TestUserCredentialsPropertiesOnUnix()
-        {
-            Assert.Throws<PlatformNotSupportedException>(() => _process.StartInfo.Domain);
-            Assert.Throws<PlatformNotSupportedException>(() => _process.StartInfo.UserName);
-            Assert.Throws<PlatformNotSupportedException>(() => _process.StartInfo.PasswordInClearText);
-            Assert.Throws<PlatformNotSupportedException>(() => _process.StartInfo.LoadUserProfile);
-        }
-
-        [Fact]
-        public void TestWorkingDirectoryProperty()
-        {
-            // check defaults
-            Assert.Equal(string.Empty, _process.StartInfo.WorkingDirectory);
-
-            Process p = CreateProcessInfinite();
-            p.StartInfo.WorkingDirectory = Directory.GetCurrentDirectory();
-
-            try
-            {
-                p.Start();
-                Assert.Equal(Directory.GetCurrentDirectory(), p.StartInfo.WorkingDirectory);
-            }
-            finally
-            {
-                if (!p.HasExited)
-                    p.Kill();
-
-                Assert.True(p.WaitForExit(WaitInMS));
+                    Assert.True(p.WaitForExit(WaitInMS));
+                }
             }
         }
 

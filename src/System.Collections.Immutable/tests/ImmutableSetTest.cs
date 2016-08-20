@@ -1,14 +1,14 @@
-// Copyright (c) Microsoft. All rights reserved.
-// Licensed under the MIT license. See LICENSE file in the project root for full license information.
+// Licensed to the .NET Foundation under one or more agreements.
+// The .NET Foundation licenses this file to you under the MIT license.
+// See the LICENSE file in the project root for more information.
 
 using System.Collections.Generic;
 using System.Diagnostics.Contracts;
 using System.Linq;
-using Validation;
 using Xunit;
 using SetTriad = System.Tuple<System.Collections.Generic.IEnumerable<int>, System.Collections.Generic.IEnumerable<int>, bool>;
 
-namespace System.Collections.Immutable.Test
+namespace System.Collections.Immutable.Tests
 {
     public abstract class ImmutableSetTest : ImmutablesTestBase
     {
@@ -245,7 +245,7 @@ namespace System.Collections.Immutable.Test
 
         protected void TryGetValueTestHelper(IImmutableSet<string> set)
         {
-            Requires.NotNull(set, "set");
+            Requires.NotNull(set, nameof(set));
 
             string expected = "egg";
             set = set.Add(expected);

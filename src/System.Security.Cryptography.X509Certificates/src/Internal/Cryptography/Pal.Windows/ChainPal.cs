@@ -1,5 +1,6 @@
-// Copyright (c) Microsoft. All rights reserved.
-// Licensed under the MIT license. See LICENSE file in the project root for full license information.
+// Licensed to the .NET Foundation under one or more agreements.
+// The .NET Foundation licenses this file to you under the MIT license.
+// See the LICENSE file in the project root for more information.
 
 using System;
 using System.Runtime.InteropServices;
@@ -35,7 +36,7 @@ namespace Internal.Cryptography.Pal
             if (!Interop.crypt32.CertVerifyCertificateChainPolicy(ChainPolicy.CERT_CHAIN_POLICY_BASE, _chain, ref para, ref status))
             {
                 int errorCode = Marshal.GetLastWin32Error();
-                exception = new CryptographicException(errorCode);
+                exception = errorCode.ToCryptographicException();
                 return default(bool?);
             }
             return status.dwError == 0;
@@ -57,7 +58,7 @@ namespace Internal.Cryptography.Pal
 
                         X509Certificate2 certificate = new X509Certificate2((IntPtr)(pChainElement->pCertContext));
                         X509ChainStatus[] chainElementStatus = GetChainStatusInformation(pChainElement->TrustStatus.dwErrorStatus);
-                        String information = Marshal.PtrToStringUni(pChainElement->pwszExtendedErrorInfo);
+                        string information = Marshal.PtrToStringUni(pChainElement->pwszExtendedErrorInfo);
 
                         X509ChainElement chainElement = new X509ChainElement(certificate, chainElementStatus, information);
                         chainElements[i] = chainElement;
@@ -103,7 +104,6 @@ namespace Internal.Cryptography.Pal
             _chain = null;
             if (chain != null)
                 chain.Dispose();
-            return;
         }
 
         private SafeX509ChainHandle _chain;

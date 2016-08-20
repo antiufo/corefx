@@ -1,20 +1,21 @@
-﻿// Copyright (c) Microsoft. All rights reserved.
-// Licensed under the MIT license. See LICENSE file in the project root for full license information.
+// Licensed to the .NET Foundation under one or more agreements.
+// The .NET Foundation licenses this file to you under the MIT license.
+// See the LICENSE file in the project root for more information.
 
 using System.Collections.Generic;
 using System.Threading.Tasks;
 using Xunit;
 
-namespace System.IO.FileSystem.Tests
+namespace System.IO.Tests
 {
     public class DirectoryInfo_GetSetTimes : FileSystemTest
     {
         public delegate void SetTime(DirectoryInfo testDir, DateTime time);
         public delegate DateTime GetTime(DirectoryInfo testDir);
 
-        public IEnumerable<Tuple<SetTime, GetTime, DateTimeKind>> TimeFunctions()
+        public IEnumerable<Tuple<SetTime, GetTime, DateTimeKind>> TimeFunctions(bool requiresRoundtripping = false)
         {
-            if (IOInputs.SupportsCreationTime)
+            if (IOInputs.SupportsGettingCreationTime && (!requiresRoundtripping || IOInputs.SupportsSettingCreationTime))
             {
                 yield return Tuple.Create<SetTime, GetTime, DateTimeKind>(
                     ((testDir, time) => {testDir.CreationTime = time; }), 
@@ -23,7 +24,11 @@ namespace System.IO.FileSystem.Tests
                 yield return Tuple.Create<SetTime, GetTime, DateTimeKind>(
                     ((testDir, time) => {testDir.CreationTimeUtc = time; }),
                     ((testDir) => testDir.CreationTimeUtc),
-                    DateTimeKind.Utc);
+                    DateTimeKind.Unspecified); 
+                yield return Tuple.Create<SetTime, GetTime, DateTimeKind>(
+                     ((testDir, time) => { testDir.CreationTimeUtc = time; }),
+                     ((testDir) => testDir.CreationTimeUtc),
+                     DateTimeKind.Utc);
             }
             yield return Tuple.Create<SetTime, GetTime, DateTimeKind>(
                 ((testDir, time) => {testDir.LastAccessTime = time; }),
@@ -31,6 +36,10 @@ namespace System.IO.FileSystem.Tests
                 DateTimeKind.Local);
             yield return Tuple.Create<SetTime, GetTime, DateTimeKind>(
                 ((testDir, time) => {testDir.LastAccessTimeUtc = time; }),
+                ((testDir) => testDir.LastAccessTimeUtc),
+                DateTimeKind.Unspecified);
+            yield return Tuple.Create<SetTime, GetTime, DateTimeKind>(
+                ((testDir, time) => { testDir.LastAccessTimeUtc = time; }),
                 ((testDir) => testDir.LastAccessTimeUtc),
                 DateTimeKind.Utc);
             yield return Tuple.Create<SetTime, GetTime, DateTimeKind>(
@@ -40,6 +49,10 @@ namespace System.IO.FileSystem.Tests
             yield return Tuple.Create<SetTime, GetTime, DateTimeKind>(
                 ((testDir, time) => {testDir.LastWriteTimeUtc = time; }),
                 ((testDir) => testDir.LastWriteTimeUtc),
+                DateTimeKind.Unspecified);
+            yield return Tuple.Create<SetTime, GetTime, DateTimeKind>(
+                ((testDir, time) => { testDir.LastWriteTimeUtc = time; }),
+                ((testDir) => testDir.LastWriteTimeUtc),
                 DateTimeKind.Utc);
         }
 
@@ -48,14 +61,24 @@ namespace System.IO.FileSystem.Tests
         {
             DirectoryInfo testDir = Directory.CreateDirectory(GetTestFilePath());
 
-            Assert.All(TimeFunctions(), (tuple) =>
+            Assert.All(TimeFunctions(requiresRoundtripping: true), (tuple) =>
             {
                 DateTime dt = new DateTime(2014, 12, 1, 12, 0, 0, tuple.Item3);
                 tuple.Item1(testDir, dt);
                 var result = tuple.Item2(testDir);
                 Assert.Equal(dt, result);
                 Assert.Equal(dt.ToLocalTime(), result.ToLocalTime());
-                Assert.Equal(dt.ToUniversalTime(), result.ToUniversalTime());
+
+                // File and Directory UTC APIs treat a DateTimeKind.Unspecified as UTC whereas
+                // ToUniversalTime treats it as local.
+                if (tuple.Item3 == DateTimeKind.Unspecified)
+                {
+                    Assert.Equal(dt, result.ToUniversalTime());
+                }
+                else
+                {
+                    Assert.Equal(dt.ToUniversalTime(), result.ToUniversalTime());
+                }
             });
         }
 

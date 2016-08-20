@@ -1,5 +1,6 @@
-// Copyright (c) Microsoft. All rights reserved.
-// Licensed under the MIT license. See LICENSE file in the project root for full license information.
+// Licensed to the .NET Foundation under one or more agreements.
+// The .NET Foundation licenses this file to you under the MIT license.
+// See the LICENSE file in the project root for more information.
 
 namespace System.Linq
 {
@@ -20,16 +21,6 @@ namespace System.Linq
             return new ArgumentException(Strings.ArgumentNotValid(message));
         }
 
-        internal static Exception UnhandledExpressionType(object message)
-        {
-            return new ArgumentException(Strings.UnhandledExpressionType(message));
-        }
-
-        internal static Exception UnhandledBindingType(object message)
-        {
-            return new ArgumentException(Strings.UnhandledBindingType(message));
-        }
-
         internal static Exception ArgumentOutOfRange(string message)
         {
             return new ArgumentOutOfRangeException(message);
@@ -43,6 +34,11 @@ namespace System.Linq
         internal static Exception NoMethodOnTypeMatchingArguments(string name, object type)
         {
             return new InvalidOperationException(Strings.NoMethodOnTypeMatchingArguments(name, type));
+        }
+
+        internal static Exception EnumeratingNullEnumerableExpression()
+        {
+            return new InvalidOperationException(Strings.EnumeratingNullEnumerableExpression());
         }
     }
 }

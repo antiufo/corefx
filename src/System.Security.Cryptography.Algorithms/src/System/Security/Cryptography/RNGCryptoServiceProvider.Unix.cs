@@ -1,21 +1,19 @@
-// Copyright (c) Microsoft. All rights reserved.
-// Licensed under the MIT license. See LICENSE file in the project root for full license information.
+// Licensed to the .NET Foundation under one or more agreements.
+// The .NET Foundation licenses this file to you under the MIT license.
+// See the LICENSE file in the project root for more information.
 
 namespace System.Security.Cryptography
 {
     internal sealed class RNGCryptoServiceProvider : RandomNumberGenerator
     {
-        public sealed override unsafe void GetBytes(byte[] data)
+        public sealed override void GetBytes(byte[] data)
         {
             ValidateGetBytesArgs(data);
             if (data.Length > 0)
             {
-                fixed (byte* buf = data)
+                if (!Interop.Crypto.GetRandomBytes(data, data.Length))
                 {
-                    if (Interop.libcrypto.RAND_pseudo_bytes(buf, data.Length) == -1)
-                    {
-                        throw Interop.libcrypto.CreateOpenSslCryptographicException();
-                    }
+                    throw Interop.Crypto.CreateOpenSslCryptographicException();
                 }
             }
         }
