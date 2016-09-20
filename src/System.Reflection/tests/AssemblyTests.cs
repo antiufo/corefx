@@ -110,7 +110,6 @@ namespace System.Reflection.Tests
         [InlineData(typeof(AssemblyTests), true)]
         [InlineData(typeof(AssemblyPublicClass.PublicNestedClass), true)]
         [InlineData(typeof(PublicEnum), true)]
-        [InlineData(typeof(BaseClass), true)]
         [InlineData(typeof(AssemblyGenericPublicClass<>), true)]
         [InlineData(typeof(AssemblyInternalClass), false)]
         public void ExportedTypes(Type type, bool expected)
@@ -280,6 +279,7 @@ namespace System.Reflection.Tests
         [MemberData(nameof(Modules_TestData))]
         public void Modules(Assembly assembly)
         {
+            Assert.NotEmpty(assembly.Modules);
             foreach (Module module in assembly.Modules)
             {
                 Assert.NotNull(module);

@@ -5,7 +5,6 @@
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
-using System.Diagnostics.Contracts;
 using System.IO;
 using System.Reflection;
 using System.Runtime.InteropServices;
@@ -448,15 +447,9 @@ namespace Internal.NativeCrypto
             {
                 safeKeyHandle.Dispose();
             }
-            if (returnType == 0)
-            {
-                return retVal;
-            }
-            else if (returnType == 1)
-            {
-                return retStr;
-            }
-            return null;
+
+            Debug.Assert(returnType == 0 || returnType == 1);
+            return returnType == 0 ? (object)retVal : retStr;
         }
 
         /// <summary>
@@ -1223,7 +1216,7 @@ namespace Internal.NativeCrypto
         /// </summary>
         private static int GetAlgIdFromOid(string oid, OidGroup oidGroup)
         {
-            Contract.Requires(oid != null);
+            Debug.Assert(oid != null);
 
             // CAPI does not have ALGID mappings for all of the hash algorithms - see if we know the mapping
             // first to avoid doing an AD lookup on these values
