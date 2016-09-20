@@ -26,12 +26,16 @@
     "../System/Dynamic/Utils/CollectionExtensions.cs",
     "../System/Dynamic/Utils/TypeExtensions.cs",
     "../System/Dynamic/Utils/TypeUtils.cs",
+    "../System/Dynamic/Utils/ExpressionVisitorUtils.cs",
     "../System/Linq/Expressions/Error.cs",
     "../System/Linq/Expressions/Set.cs",
     "../System/Linq/Expressions/Utils.cs",
     "../System/Linq/Expressions/Strings.cs",
     "../System/Linq/Expressions/Compiler/DelegateHelpers.Generated.cs",
-    "../System/Linq/Expressions/Interpreter/*.cs"
+    "../System/Linq/Expressions/Interpreter/*.cs",
+    "../System/Linq/Expressions/StackGuard.cs",
+    "../System/Linq/Expressions/Common/CachedReflectionInfo.cs",
+    "../System/Linq/Expressions/Common/ConstantCheck.cs"
   ],
   "frameworks": {
     "net46": {},

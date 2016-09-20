@@ -387,13 +387,13 @@ namespace System.Linq.Expressions.Tests
         [Fact]
         public static void AccessIndexedPropertyWithoutIndex()
         {
-            Assert.Throws<ArgumentException>(null, () => Expression.Property(Expression.Default(typeof(List<int>)), typeof(List<int>).GetProperty("Item")));
+            Assert.Throws<ArgumentException>("property", () => Expression.Property(Expression.Default(typeof(List<int>)), typeof(List<int>).GetProperty("Item")));
         }
 
         [Fact]
         public static void AccessIndexedPropertyWithoutIndexWriteOnly()
         {
-            Assert.Throws<ArgumentException>(null, () => Expression.Property(Expression.Default(typeof(UnreadableIndexableClass)), typeof(UnreadableIndexableClass).GetProperty("Item")));
+            Assert.Throws<ArgumentException>("property", () => Expression.Property(Expression.Default(typeof(UnreadableIndexableClass)), typeof(UnreadableIndexableClass).GetProperty("Item")));
         }
         
         [Fact]
@@ -535,6 +535,16 @@ namespace System.Linq.Expressions.Tests
             Assert.Throws<ArgumentException>("property", () => Expression.PropertyOrField(expression, createdProperty.Name));
 
             Assert.Throws<ArgumentException>("property", () => Expression.MakeMemberAccess(expression, createdProperty));
+        }
+
+        [Fact]
+        public static void ToStringTest()
+        {
+            var e1 = Expression.Property(null, typeof(DateTime).GetProperty(nameof(DateTime.Now)));
+            Assert.Equal("DateTime.Now", e1.ToString());
+
+            var e2 = Expression.Property(Expression.Parameter(typeof(DateTime), "d"), typeof(DateTime).GetProperty(nameof(DateTime.Year)));
+            Assert.Equal("d.Year", e2.ToString());
         }
     }
 }

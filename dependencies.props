@@ -1,21 +1,23 @@
 <Project ToolsVersion="12.0" DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <!-- Source of truth for dependency tooling: the commit hash of the dotnet/versions master branch as of the last auto-upgrade. -->
   <PropertyGroup>
-    <CoreFxCurrentRef>e56d42bb4e21670802df311d7d440895babf86dd</CoreFxCurrentRef>
-    <CoreClrCurrentRef>c46101d17dfca07c64d81de3d7fe3fba3c5b1005</CoreClrCurrentRef>
-    <ExternalCurrentRef>e39a63f68adeb45d0ef1a7a157cbf13c89ce3d2d</ExternalCurrentRef>
+    <CoreFxCurrentRef>28a83dee3f93454bf9c91efe1344b77d16d65594</CoreFxCurrentRef>
+    <CoreClrCurrentRef>1626da58f07032e753e5ca6b5b029f196c030208</CoreClrCurrentRef>
+    <ExternalCurrentRef>8abe68199b986664a0bb07fe3935422b3986c93d</ExternalCurrentRef>
+    <ProjectNTfsCurrentRef>cf161ece5ab582e3ae854079506d81d388162490</ProjectNTfsCurrentRef>
   </PropertyGroup>
 
   <!-- Auto-upgraded properties for each build info dependency. -->
   <PropertyGroup>
-    <CoreFxExpectedPrerelease>beta-24420-01</CoreFxExpectedPrerelease>
-    <CoreClrExpectedPrerelease>beta-24419-04</CoreClrExpectedPrerelease>
-    <ExternalExpectedPrerelease>beta-24418-00</ExternalExpectedPrerelease>
+    <CoreFxExpectedPrerelease>beta-24516-03</CoreFxExpectedPrerelease>
+    <CoreClrExpectedPrerelease>beta-24519-02</CoreClrExpectedPrerelease>
+    <ExternalExpectedPrerelease>beta-24514-00</ExternalExpectedPrerelease>
   </PropertyGroup>
 
   <!-- Full package version strings that are used in other parts of the build. -->
   <PropertyGroup>
-    <AppXRunnerVersion>1.0.3-prerelease-00614-01</AppXRunnerVersion>
+    <AppXRunnerVersion>1.0.3-prerelease-00808-02</AppXRunnerVersion>
+    <XunitPerfAnalysisPackageVersion>1.0.0-alpha-build0040</XunitPerfAnalysisPackageVersion>
   </PropertyGroup>
 
   <!-- Package dependency verification/auto-upgrade configuration. -->
@@ -37,6 +39,10 @@
     <RemoteDependencyBuildInfo Include="External">
       <BuildInfoPath>$(BaseDotNetBuildInfo)projectk-tfs/$(DependencyBranch)</BuildInfoPath>
       <CurrentRef>$(ExternalCurrentRef)</CurrentRef>
+    </RemoteDependencyBuildInfo>
+    <RemoteDependencyBuildInfo Include="ProjectNTfs">
+      <BuildInfoPath>$(BaseDotNetBuildInfo)projectn-tfs/$(DependencyBranch)</BuildInfoPath>
+      <CurrentRef>$(ProjectNTfsCurrentRef)</CurrentRef>
     </RemoteDependencyBuildInfo>
 
     <DependencyBuildInfo Include="@(RemoteDependencyBuildInfo)">
@@ -81,7 +87,7 @@
     </StaticDependency>
 
     <StaticDependency Include="Microsoft.xunit.netcore.extensions;Microsoft.DotNet.BuildTools.TestSuite">
-      <Version>1.0.0-prerelease-00704-03</Version>
+      <Version>1.0.0-prerelease-00807-03</Version>
     </StaticDependency>
 
     <DependencyBuildInfo Include="@(StaticDependency)">
@@ -92,6 +98,11 @@
     <DependencyBuildInfo Include="uwpRunnerVersion">
       <PackageId>microsoft.xunit.runner.uwp</PackageId>
       <Version>$(AppXRunnerVersion)</Version>
+    </DependencyBuildInfo>
+
+    <DependencyBuildInfo Include="XunitPerfAnalysisPackageVersion">
+      <PackageId>Microsoft.DotNet.xunit.performance</PackageId>
+      <Version>$(XunitPerfAnalysisPackageVersion)</Version>
     </DependencyBuildInfo>
   </ItemGroup>
 </Project>
